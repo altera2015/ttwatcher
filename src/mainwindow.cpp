@@ -288,5 +288,5 @@ void MainWindow::on_actionShow_in_explorer_triggered()
 
 void MainWindow::on_actionAbout_triggered()
 {
-    QMessageBox::information(this, tr("TTWatcher"), tr("ttbin tcx exporter, handles even corrupted ttbin files.\nhttps://github.com/altera2015/ttwatcher"));
+    QMessageBox::information(this, tr("TTWatcher"), tr("TTWatcher 1.0\nttbin tcx exporter, handles even corrupted ttbin files.\nhttps://github.com/altera2015/ttwatcher"));
 }

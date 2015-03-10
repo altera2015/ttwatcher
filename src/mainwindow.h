@@ -5,6 +5,7 @@
 #include <QFileSystemModel>
 #include "ttmanager.h"
 #include "activity.h"
+#include "qcustomplot.h"
 
 namespace Ui {
 class MainWindow;
@@ -17,10 +18,12 @@ class MainWindow : public QMainWindow
     ActivityPtr m_Activity;
     QVector<double> m_Seconds;
     QVector<double> m_HeartBeat;
+    QVector<double> m_Cadence;
     QVector<double> m_Speed;
     bool processTTBin(const QString& filename);
     QString ttdir() const;
     QFileSystemModel * m_FSModel;
+    QCPAxis * m_Axis3;
 public:
     explicit MainWindow(QWidget *parent = 0);
     ~MainWindow();

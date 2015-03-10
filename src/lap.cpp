@@ -147,9 +147,10 @@ void Lap::calcTotals()
     {
         setHeartBeats( heartBeats / heartBeatCount );
     }
-    if ( duration > 0 )
+
+    if ( cadenceCount > 0 )
     {
-        setCadence( cadence * 60 / duration );
+        setCadence( cadence * 60 / cadenceCount ); // use cadenceCount instead of duration in case of corrupted file or standing still.
     }
     setLength( distance );
 }

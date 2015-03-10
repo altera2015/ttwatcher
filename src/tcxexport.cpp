@@ -65,6 +65,7 @@ void TCXExport::save(QIODevice *dev, ActivityPtr activity)
             stream.writeStartElement("Position");
             stream.writeTextElement("LatitudeDegrees", QString::number(tp->latitude()) );
             stream.writeTextElement("LongitudeDegrees", QString::number(tp->longitude()) );
+            stream.writeTextElement("AltitudeMeters", QString::number(tp->altitude()) );
 
             stream.writeTextElement("DistanceMeters", QString::number(tp->cummulativeDistance() - totaldistance));
             totaldistance = tp->cummulativeDistance();

@@ -69,18 +69,16 @@ float TTBinReader::readFloat(quint8 *data, int pos)
 
     // float has 4 bytes.
     // little endian and big endian are different.
-
-    if ( O32_HOST_ORDER != O32_LITTLE_ENDIAN )
-    {
-        // the TT stores in Little Endian format.
+    //qDebug() << data[0 + pos ] << data[1 + pos ] << data[2 + pos ] << data[3 + pos ];
+    if ( O32_HOST_ORDER == O32_LITTLE_ENDIAN )
+    {        
         d[0] = data[0 + pos ];
         d[1] = data[1 + pos ];
         d[2] = data[2 + pos ];
         d[3] = data[3 + pos ];
     }
     else
-    {
-        // flip around for out big endian friends.
+    {             
         d[3] = data[0 + pos ];
         d[2] = data[1 + pos ];
         d[1] = data[2 + pos ];
@@ -386,7 +384,17 @@ bool TTBinReader::readTreadmill(QIODevice &ttbin, ActivityPtr activity)
 
     TrackPointPtr lp = TrackPointPtr::create();
     lp->setTime( readTime( data, 0, false ) );
-    lp->setIncrementalDistance( readFloat(data,4));
+
+    if ( lap->points().count() > 0 )
+    {
+        TrackPointPtr lastPt = lap->points().last();
+        lp->setCummulativeDistance( lastPt->cummulativeDistance() + readFloat(data,4) );
+
+    }
+    else
+    {
+        lp->setCummulativeDistance( readFloat(data,4));
+    }
     lp->setCalories( readquint32( data, 8 ));
     lp->setCadence( readquint32(data, 12));
 

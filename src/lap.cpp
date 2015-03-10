@@ -86,45 +86,11 @@ void Lap::calcTotals()
     int heartBeatCount = 0;
     quint64 cadence = 0;
     int cadenceCount = 0;
-    float distance = 0;
+    float distance = m_Points.last()->cummulativeDistance() - m_Points.first()->cummulativeDistance();
 
     for(int i=0;i<m_Points.count();i++)
     {
         TrackPointPtr p = m_Points.at(i);
-
-        if ( i > 0 )
-        {
-            TrackPointPtr lastp = m_Points.at(i-1);
-            if ( p->hasGPS() && lastp->hasGPS() )
-            {
-                double incrementalDistance = geodistance( p->latitude(), p->longitude(), lastp->latitude(), lastp->longitude(), 'K' ) * 1000;
-                distance += incrementalDistance;
-                if ( p->incrementalDistance()== 0 )
-                {
-                    p->setIncrementalDistance(incrementalDistance);
-                    p->setCummulativeDistance(distance);
-                }
-            }
-            else
-            {
-                if ( p->incrementalDistance() == 0 )
-                {
-                    p->setIncrementalDistance( lastp->cummulativeDistance() - distance );
-                    distance = p->cummulativeDistance();
-                }
-                else
-                {
-                    if ( p->cummulativeDistance()==0)
-                    {
-                        distance += p->incrementalDistance();
-                        p->setCummulativeDistance(distance);
-                    }
-                }
-            }
-
-
-
-        }
 
         if ( p->heartRate() > 0 )
         {

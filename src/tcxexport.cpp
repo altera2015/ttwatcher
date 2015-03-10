@@ -9,7 +9,6 @@ void TCXExport::save(QIODevice *dev, ActivityPtr activity)
 {
     int cadenceTotal = 0, cadenceCount = 0;
     QDateTime cadenceStart;
-    double totaldistance = 0.0;
 
     QXmlStreamWriter stream(dev);
     stream.setAutoFormatting(true);
@@ -65,12 +64,10 @@ void TCXExport::save(QIODevice *dev, ActivityPtr activity)
             stream.writeStartElement("Position");
             stream.writeTextElement("LatitudeDegrees", QString::number(tp->latitude()) );
             stream.writeTextElement("LongitudeDegrees", QString::number(tp->longitude()) );
-            stream.writeTextElement("AltitudeMeters", QString::number(tp->altitude()) );
-
-            stream.writeTextElement("DistanceMeters", QString::number(tp->cummulativeDistance() - totaldistance));
-            totaldistance = tp->cummulativeDistance();
-
             stream.writeEndElement(); // Position.
+
+            stream.writeTextElement("AltitudeMeters", QString::number(tp->altitude()) );
+            stream.writeTextElement("DistanceMeters", QString::number(tp->cummulativeDistance()));
 
             if ( tp->heartRate() >= 0 )
             {

@@ -78,12 +78,9 @@ void ElevationLoader::finished(QNetworkReply *reply)
         return;
     }
 
-
     QByteArray data = reply->readAll();
     reply->deleteLater();
     reply = 0;
-
-    qDebug() << data;
 
     bool success = process(activity, data);
 

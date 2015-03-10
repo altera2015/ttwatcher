@@ -11,16 +11,6 @@ void TrackPoint::setCalories(int Calories)
     m_Calories = Calories;
 }
 
-float TrackPoint::incrementalDistance() const
-{
-    return m_IncrementalDistance;
-}
-
-void TrackPoint::setIncrementalDistance(float IncrementalDistance)
-{
-    m_IncrementalDistance = IncrementalDistance;
-}
-
 float TrackPoint::cummulativeDistance() const
 {
     return m_CummulativeDistance;
@@ -48,7 +38,7 @@ bool TrackPoint::hasGPS()
 
 QString TrackPoint::toString() const
 {
-    return QString("Time %1, Latitude %2, Longitude %3, Altitude %4, HeartRate %5, Cadence %6, Calories %7, Distance %8, Cummulative Distance %9")\
+    return QString("Time %1, Latitude %2, Longitude %3, Altitude %4, HeartRate %5, Cadence %6, Calories %7, Cummulative Distance %8")\
             .arg(time().toString())\
             .arg(latitude())\
             .arg(longitude())\
@@ -56,7 +46,6 @@ QString TrackPoint::toString() const
             .arg(heartRate())\
             .arg(cadence())\
             .arg(calories())\
-            .arg(incrementalDistance())\
             .arg(cummulativeDistance());
 }
 
@@ -66,8 +55,7 @@ TrackPoint::TrackPoint() :
     m_Altitude(0.0),
     m_HeartRate(-1),
     m_Cadence(-1),
-    m_Calories(-1),
-    m_IncrementalDistance(0.0),
+    m_Calories(-1),    
     m_CummulativeDistance(0.0),
     m_Speed(0.0)
 {

@@ -14,8 +14,7 @@ class TrackPoint
     double m_Altitude;
     int m_HeartRate;
     int m_Cadence;
-    int m_Calories;
-    float m_IncrementalDistance;
+    int m_Calories;    
     float m_CummulativeDistance;
     double m_Speed;
 
@@ -37,8 +36,6 @@ public:
     void setCadence(int cadence);
     int calories() const;
     void setCalories(int calories);
-    float incrementalDistance() const;
-    void setIncrementalDistance(float incrementalDistance);
     float cummulativeDistance() const;
     void setCummulativeDistance(float cummulativeDistance);
 

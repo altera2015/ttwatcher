@@ -57,6 +57,16 @@ QString Activity::sportString() const
     }
 }
 
+void Activity::setFilename(const QString &filename)
+{
+    m_Filename = filename;
+}
+
+QString Activity::filename() const
+{
+    return m_Filename;
+}
+
 QString Activity::toString() const
 {
     QString str = QString("Time %1, Notes %2, Sport %3\n").arg(m_Date.toString()).arg(m_Notes).arg(m_Sport);

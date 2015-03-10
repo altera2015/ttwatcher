@@ -18,7 +18,8 @@ SOURCES += main.cpp\
     trackpoint.cpp \
     geodistance.cpp \
     tcxexport.cpp \
-    qcustomplot.cpp
+    qcustomplot.cpp \
+    elevationloader.cpp
 
 win32:SOURCES+=hid.c
 unix:linux:SOURCES+=hidlinux.c
@@ -37,7 +38,8 @@ HEADERS  += mainwindow.h \
     order32.h \
     geodistance.h \
     tcxexport.h \
-    qcustomplot.h
+    qcustomplot.h \
+    elevationloader.h
 
 FORMS    += mainwindow.ui
 

@@ -7,7 +7,7 @@ TCXExport::TCXExport()
 
 void TCXExport::save(QIODevice *dev, ActivityPtr activity)
 {
-    int cadenceTotal = 0;
+    int cadenceTotal = 0, cadenceCount = 0;
     QDateTime cadenceStart;
     double totaldistance = 0.0;
 
@@ -82,10 +82,12 @@ void TCXExport::save(QIODevice *dev, ActivityPtr activity)
             {
                 if ( cadenceTotal == 0 )
                 {
-                    cadenceStart = tp->time();
+                    cadenceStart = tp->time(); // when the file is corrupted we don't get cadence every second. So keep track of how many cadence counts we got instead of start time.
+                    cadenceCount = 0;
                     if ( tp->cadence() > 0 )
                     {
                         cadenceTotal += tp->cadence();
+                        cadenceCount++;
                     }
                 }
                 else
@@ -93,13 +95,15 @@ void TCXExport::save(QIODevice *dev, ActivityPtr activity)
                     if ( tp->cadence() >0 )
                     {
                         cadenceTotal += tp->cadence();
+                        cadenceCount++;
                     }
 
-                    int secs = cadenceStart.secsTo(tp->time());
-                    if ( secs >= 60 )
+                    // int secs = cadenceStart.secsTo(tp->time());
+                    if ( cadenceCount >= 60 )
                     {
-                        stream.writeTextElement("Cadence", QString::number(  cadenceTotal * 60 / secs  ));
+                        stream.writeTextElement("Cadence", QString::number(  cadenceTotal * 60 / cadenceCount  ));
                         cadenceTotal = 0;
+                        cadenceCount = 0;
                     }
                 }
             }

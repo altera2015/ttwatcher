@@ -152,7 +152,7 @@ void MainWindow::onElevationLoaded(bool success, ActivityPtr activity)
                     }
                     if ( cadence.count() > 10 )
                     {
-                        m_Cadence.append( 60 * dc / cadence.count() );
+                        m_Cadence.append( 60.0 * dc / cadence.count() );
                     }
                     else
                     {

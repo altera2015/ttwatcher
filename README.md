@@ -13,6 +13,8 @@ files.**
 
 # Releases
 
+###1.2.0 March 11, 2015 Fixed Running Cadence
+
 ###1.1.0 March 11, 2015 Cleanup and Feature updates
 [Download Installer Here](https://github.com/altera2015/ttwatcher/releases/download/v1.1.0/TTWatcherSetup_x86_1.1.0.0.exe)
 

@@ -22,7 +22,9 @@ public:
     void setNotes( const QString & notes );
     Sport sport() const;
     void setSport(Sport sport);
-    QString sportString() const;
+    QString sportString() const;    
+    void setFilename( const QString & filename);
+    QString filename() const;
 
     QString toString() const;
     TrackPointPtr find( int secondsSinceStart );
@@ -32,9 +34,11 @@ private:
     QDateTime m_Date;
     QString m_Notes;
     Sport m_Sport;
+    QString m_Filename;
 
 };
 
 typedef QSharedPointer<Activity>ActivityPtr;
+Q_DECLARE_METATYPE( ActivityPtr )
 
 #endif // ACTIVITY_H

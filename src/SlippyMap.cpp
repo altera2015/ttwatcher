@@ -39,63 +39,9 @@ static qreal latitudeFromTile(qreal ty, int zoom)
     return lng;
 }
 
-
-// this little gem takes a spiral walk over an imaginary array and stores the
-// indices in the list in reverse order. this is useful for tile loading
-// by loading the inner tiles first then the outer tiles.
+// not quite a spirallist. TODO make it one.
 static void reverseSpiralList ( int start, int end, int startY, int h, QList<QPoint> &list)
 {
-    /*int x,w;
-
-    if ( h < 0 ) return;
-
-    for ( int i=start; i<end;i++ )
-    {
-        list.insert(0, QPoint(i,y));
-    }
-
-    if ( (start == end && h == 0) || h <= 0 ) return;
-
-
-    x = end - 1;
-    w = end - start - 1;
-    start = y + 1;
-    end = y + h;
-
-    for (int j=start; j<end; j++)
-    {
-        list.insert(0, QPoint(x,j));
-    }
-    if ( (start == end && w == 0) || w <= 0 ) return;
-
-
-    y = end-1;
-    h = end-start-1;
-    start = x - 1;
-    end = x - w;
-
-    for (int i=start; i>=end; i-- )
-    {
-        list.insert(0, QPoint(i,y));
-    }
-
-    if ( h <= 0 ) return;
-
-    x = end;
-    w = start -end +1 ;
-    start = y - 1;
-    end = y - h;
-
-    for (int j=start; j>=end; j--)
-    {
-        list.insert(0, QPoint(x,j));
-    }
-
-    if ( w <= 0 ) return;
-
-    reverseSpiralList( x+1, x+w, end, start-end+1,list);*/
-
-
     for (int y=startY;y < (startY + h); y++)
     {
         for (int x=start;x<=end;x++)
@@ -141,10 +87,15 @@ SlippyMap::SlippyMap(QObject *parent) : QObject(parent), width(400), height(300)
 void SlippyMap::invalidate()
 {
 
-    if ( !locationSet) return;
+    if ( !locationSet)
+    {
+        return;
+    }
 
     if (width <= 0 || height <= 0)
+    {
         return;
+    }
 
     m_CenterPoint = tileForCoordinate(latitude, longitude, zoom);
 
@@ -191,14 +142,6 @@ void SlippyMap::invalidate()
         }
     }
 
-
-
-    /*
-    if (m_url.isEmpty())
-    {
-        download();
-    }*/
-
     download();
 
     emit updated(QRect(0, 0, width, height));
@@ -228,13 +171,13 @@ void SlippyMap::render(QPainter *p, const QRect &rect)
 }
 
 void SlippyMap::pan(const QPoint &delta)
-{
-    qDebug() << "Pan";
+{    
     QPointF dx = QPointF(delta) / qreal(tdim);
     QPointF center = tileForCoordinate(latitude, longitude, zoom) - dx;
     latitude = latitudeFromTile(center.y(), zoom);
-    longitude = longitudeFromTile(center.x(), zoom);
+    longitude = longitudeFromTile(center.x(), zoom);    
     invalidate();
+
 }
 
 
@@ -298,13 +241,12 @@ void SlippyMap::handleNetworkData(QNetworkReply *reply)
 
 void SlippyMap::download()
 {
-    // qDebug() << "SlippyMap::download / called";
-
     if (! m_url.isEmpty() )
     {
-        // qDebug() << "downloading...";
+        qDebug() << "already downloading abort...";
         return;
     }
+
     QPoint grab(0, 0);
     for ( int i=0;i<m_TileList.length();i++)
     {
@@ -316,7 +258,7 @@ void SlippyMap::download()
                 return;
             }
         }
-    }
+    }    
 }
 
 // returns true if download should get the next
@@ -347,6 +289,7 @@ bool SlippyMap::download(QPoint grab)
         d->deleteLater();
 
         processTile(grab, data);
+        m_url = 0;
 
         return true;
     }

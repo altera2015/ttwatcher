@@ -68,6 +68,16 @@ void MainWindow::onElevationLoaded(bool success, ActivityPtr activity)
         return;
     }
 
+    if ( !success )
+    {
+        qDebug() << "MainWindow::onElevationLoaded / elevation data load failed.";
+        ui->statusBar->showMessage(tr("Import done, failed to load elevation data, retry later."));
+    }
+    else
+    {
+        ui->statusBar->showMessage(tr("Import done."));
+    }
+
     double centerLat=0, centerLng=0;
     int centerCntr=0;
 
@@ -109,7 +119,10 @@ void MainWindow::onElevationLoaded(bool success, ActivityPtr activity)
 
             m_Seconds.append( tp->time().toTime_t() - firstTime );
 
-            m_Elevation.append( tp->altitude() );
+            if ( success )
+            {
+                m_Elevation.append( tp->altitude() );
+            }
 
             if ( tp->heartRate() > 0 )
             {
@@ -228,7 +241,7 @@ void MainWindow::onElevationLoaded(bool success, ActivityPtr activity)
 
     ui->mapWidget->setCenter(centerLat/centerCntr, centerLng/centerCntr);
 
-    ui->statusBar->showMessage(tr("Import done."));
+
 
     QFile of(m_Activity->filename() + ".tcx");
     if (!of.open(QIODevice::WriteOnly))
@@ -336,7 +349,10 @@ void MainWindow::onGraphMouseMove(QMouseEvent *event)
             cadence = m_Cadence.at(idx);
         }
 
-        QString msg = QString("Time=%1 s, HeartRate=%2 bpm, Speed=%3 kph, Distance=%4 m, Cadence=%5 pm, Elevation=%6").arg(pos).arg(pt->heartRate()).arg(pt->speed()*3.6).arg( pt->cummulativeDistance() ).arg(cadence).arg(pt->altitude());
+        QTime t(0,0,0);
+        t = t.addSecs((int)pos);
+
+        QString msg = QString("Time=%1, HeartRate=%2 bpm, Speed=%3 kph, Distance=%4 m, Cadence=%5 pm, Elevation=%6").arg(t.toString()).arg(pt->heartRate()).arg(pt->speed()*3.6).arg( pt->cummulativeDistance() ).arg(cadence).arg(pt->altitude());
         ui->statusBar->showMessage(msg,5000);
         ui->mapWidget->addCircle( pt->latitude(), pt->longitude() );
         ui->mapWidget->repaint();

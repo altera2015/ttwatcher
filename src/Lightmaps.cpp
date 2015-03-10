@@ -87,8 +87,10 @@ void LightMaps::resizeEvent(QResizeEvent *)
 
 void LightMaps::paintEvent(QPaintEvent *event)
 {
-    QPainter p;
+    QPainter p;    
     p.begin(this);
+    p.setRenderHint(QPainter::Antialiasing);
+
     m_Map->render(&p, event->rect());
 
     QPen pen;
@@ -96,6 +98,7 @@ void LightMaps::paintEvent(QPaintEvent *event)
     pen.setWidth(3);
     p.setPen(pen);
 
+    QPolygon polygon;
     // Draw graphics over the top.
     foreach ( const QRectF& line, m_Lines )
     {
@@ -116,6 +119,7 @@ void LightMaps::paintEvent(QPaintEvent *event)
         }
 
         p.drawLine(p1,p2);
+
 
     }
 
@@ -141,7 +145,7 @@ void LightMaps::paintEvent(QPaintEvent *event)
     }
 
 
-    p.setPen(Qt::black);
+    p.setPen(Qt::darkGray);
 
     p.drawText(rect(),  Qt::AlignBottom | Qt::TextWordWrap,
                "Map data CCbySA 2009 OpenStreetMap.org contributors");

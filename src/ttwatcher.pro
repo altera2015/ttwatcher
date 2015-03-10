@@ -4,7 +4,7 @@ TARGET = ttwatcher
 TEMPLATE = app
 
 win32:LIBS+=-lUser32 -lPsapi -lhid -lsetupapi
-
+win32:RC_FILE = ttwatcher.rc
 
 SOURCES += main.cpp\
         mainwindow.cpp \    

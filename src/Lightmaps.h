@@ -37,7 +37,7 @@ public:
     void addLine( qreal latitude1, qreal longitude1, qreal latitude2, qreal longitude2);
 
     void clearCircles();
-    void addCircle( qreal latitude, qreal longitude );
+    void addCircle( qreal latitude, qreal longitude );    
 
 private slots:
     void updateMap(const QRect &r);

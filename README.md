@@ -11,6 +11,15 @@ experiment with improving the ttbin parsing / communications.
 **DISCLAIMER: I STRONGLY SUGGEST USING THE OFFICIAL APP TO DOWNLOAD YOUR ttbin 
 files.**
 
+# Updates
+
+1.0.0 March 10, 2015 Initial Release
+1.1.0 March 11, 2015 Cleanup
+      * Added support for Cadence exporting (even during Running activity!)
+	  * Added support for Elevation Data
+	  * Improved Graphs
+	  * Lots of cleanups
+	  * Added installer
 
 # Heritage
 

@@ -91,6 +91,9 @@ float TTBinReader::readFloat(quint8 *data, int pos)
 
 }
 
+
+
+
 bool TTBinReader::readHeader(QIODevice &ttbin, ActivityPtr activity )
 {
     /*
@@ -159,6 +162,27 @@ bool TTBinReader::readHeader(QIODevice &ttbin, ActivityPtr activity )
     return true;
 }
 
+
+bool TTBinReader::readData(QIODevice &ttbin, quint8 tag, int expectedSize, QByteArray &dest)
+{
+    int recordLen = m_RecordLengths.contains(tag) ? m_RecordLengths[tag] : expectedSize;
+    if ( recordLen < expectedSize )
+    {
+        qCritical() << "TTBinReader::read / length from record length field is smaller than we expect." << QString::number(tag,16) << recordLen << expectedSize;
+        return false;
+    }
+
+    dest = ttbin.read(recordLen);
+
+    if ( dest.length() != recordLen )
+    {
+        qWarning() << "TTBinReader::read / not enough bytes read."  << QString::number(tag,16) << recordLen << expectedSize << dest.size();
+        return false;
+    }
+
+    return true;
+}
+
 bool TTBinReader::readLap(QIODevice &ttbin, ActivityPtr activity)
 {
     /*
@@ -168,16 +192,13 @@ bool TTBinReader::readLap(QIODevice &ttbin, ActivityPtr activity)
       quint32 time since start.
     } Lap2;*/
 
-    int recordLen = m_RecordLengths.contains(0x21) ? m_RecordLengths[0x21] : 0x6;
-    QByteArray buffer;
-    buffer.resize(recordLen);
-    quint8 * data = (quint8*)buffer.data();
 
-    if ( ttbin.read((char*)data, recordLen) != recordLen )
+    QByteArray buffer;
+    if ( !readData(ttbin, 0x21, 0x06, buffer))
     {
-        qWarning() << "TTBinReader::readLap / not enough bytes read.";
         return false;
     }
+    quint8 * data = (quint8*)buffer.data();
 
     //activity->setDate( readTime(data, 2) );
 
@@ -210,13 +231,12 @@ bool TTBinReader::readHeartRate(QIODevice &ttbin, ActivityPtr activity)
       quint32 time;
     } HeartRate;*/
 
-
-    quint8 data[0x6];
-    if ( ttbin.read((char*)data, 0x6) != 0x6 )
+    QByteArray buffer;
+    if ( !readData(ttbin, 0x25, 0x06, buffer))
     {
-        qWarning() << "TTBinReader::readHeartRate / not enough bytes read.";
         return false;
     }
+    quint8 * data = (quint8*)buffer.data();
 
     LapPtr lap = activity->laps().last();
 
@@ -248,21 +268,12 @@ bool TTBinReader::readPosition(QIODevice &ttbin, ActivityPtr activity, bool forg
       quint8 cycles; // Tomtom CSV calls it "cycles", maybe steps?
     } GPS;*/
 
-    int recordLen = m_RecordLengths.contains(0x22) ? m_RecordLengths[0x22] : 0x1b;
-    if ( recordLen < 0x1b )
-    {
-        qCritical() << "TTBinReader::readPosition / length from record length field is smaller than we expect.";
-        return false;
-    }
     QByteArray buffer;
-    buffer.resize(recordLen);
-    quint8 * data = (quint8*)buffer.data();
-
-    if ( ttbin.read((char*)data, recordLen) != recordLen )
+    if ( !readData(ttbin, 0x22, 0x1b, buffer))
     {
-        qWarning() << "TTBinReader::readPosition / not enough bytes read.";
         return false;
     }
+    quint8 * data = (quint8*)buffer.data();
 
     LapPtr lap = activity->laps().last();
     TrackPointPtr tp = TrackPointPtr::create();
@@ -280,7 +291,7 @@ bool TTBinReader::readPosition(QIODevice &ttbin, ActivityPtr activity, bool forg
         if ( tp->latitude() > 90 || tp->latitude() < -90 || tp->longitude() > 180 || tp->longitude() < -180 || tp->speed() > 50 )
         {
             qDebug() << "INVALID POSITION RECORD.";
-            ttbin.seek( ttbin.pos() - recordLen );
+            ttbin.seek( ttbin.pos() - buffer.length() );
             return true;
         }
     }
@@ -317,21 +328,13 @@ bool TTBinReader::readSummary(QIODevice &ttbin, ActivityPtr activity)
       quint16 calories;
     } Summary;*/
 
-    int recordLen = m_RecordLengths.contains(0x27) ? m_RecordLengths[0x27] : 0xb;
-    if ( recordLen < 0xb )
-    {
-        qCritical() << "TTBinReader::readSummary / length from record length field is smaller than we expect.";
-        return false;
-    }
-    QByteArray buffer;
-    buffer.resize(recordLen);
-    quint8 * data = (quint8*)buffer.data();
 
-    if ( ttbin.read((char*)data, recordLen) != recordLen )
+    QByteArray buffer;
+    if ( !readData(ttbin, 0x27, 0x0b, buffer))
     {
-        qWarning() << "TTBinReader::readSummary / not enough bytes read.";
         return false;
     }
+    quint8 * data = (quint8*)buffer.data();
 
     switch ( data[0] )
     {
@@ -350,11 +353,12 @@ bool TTBinReader::readSummary(QIODevice &ttbin, ActivityPtr activity)
     }
 
     // thanks, we'll calculate these.
-
-    /* LapPtr lap = activity->laps().first();
+    /*
     lap->setLength( readFloat(data, 1));
-    lap->setTotalSeconds( readquint32(data, 5) );
-    lap->setCalories( readquint16( data, 9 ));*/
+    lap->setTotalSeconds( readquint32(data, 5) );*/
+
+    LapPtr lap = activity->laps().first();
+    lap->setCalories( readquint16( data, 9 ));
 
     return true;
 }
@@ -371,21 +375,12 @@ bool TTBinReader::readTreadmill(QIODevice &ttbin, ActivityPtr activity)
     } Treadmill; */
 
 
-    int recordLen = m_RecordLengths.contains(0x32) ? m_RecordLengths[0x32] : 0x12;
-    if ( recordLen < 0x12 )
-    {
-        qCritical() << "TTBinReader::readTreadmill / length from record length field is smaller than we expect.";
-        return false;
-    }
     QByteArray buffer;
-    buffer.resize(recordLen);
-    quint8 * data = (quint8*)buffer.data();
-
-    if ( ttbin.read((char*)data, recordLen) != recordLen )
+    if ( !readData(ttbin, 0x32, 0x12, buffer))
     {
-        qWarning() << "TTBinReader::readTreadmill / not enough bytes read.";
         return false;
     }
+    quint8 * data = (quint8*)buffer.data();
 
     LapPtr lap = activity->laps().last();
 
@@ -412,22 +407,13 @@ bool TTBinReader::readSwim(QIODevice &ttbin, ActivityPtr activity)
       quint32 calories;
     } Swim;
     */
-    int recordLen = m_RecordLengths.contains(0x34) ? m_RecordLengths[0x34] : 0x1c;
-    if ( recordLen < 0x1c )
-    {
-        qCritical() << "TTBinReader::readSwim / length from record length field is smaller than we expect.";
-        return false;
-    }
+
     QByteArray buffer;
-    buffer.resize(recordLen);
-    quint8 * data = (quint8*)buffer.data();
-
-    if ( ttbin.read((char*)data, recordLen) != recordLen )
+    if ( !readData(ttbin, 0x34, 0x1c, buffer))
     {
-        qWarning() << "TTBinReader::readSwim / not enough bytes read.";
         return false;
     }
-
+    quint8 * data = (quint8*)buffer.data();
 
     LapPtr lap = activity->laps().last();
 

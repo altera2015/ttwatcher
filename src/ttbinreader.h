@@ -17,6 +17,7 @@ class TTBinReader
     QDateTime readTime(quint8 * data, int pos , bool inUTC);
     float readFloat( quint8 * data, int pos );
 
+    bool readData( QIODevice & ttbin, quint8 tag, int expectedSize, QByteArray & dest );
     bool readHeader( QIODevice & ttbin, ActivityPtr activity );
     bool readLap( QIODevice & ttbin, ActivityPtr activity );
     bool readHeartRate( QIODevice & ttbin, ActivityPtr activity );

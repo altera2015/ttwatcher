@@ -18,23 +18,66 @@
     <normaloff>:/icons/running32.png</normaloff>:/icons/running32.png</iconset>
   </property>
   <widget class="QWidget" name="centralWidget">
-   <layout class="QVBoxLayout" name="verticalLayout">
+   <layout class="QHBoxLayout" name="horizontalLayout">
     <item>
      <widget class="QSplitter" name="splitter_2">
       <property name="orientation">
        <enum>Qt::Horizontal</enum>
       </property>
-      <widget class="QTreeView" name="treeView">
+      <widget class="QWidget" name="widget" native="true">
        <property name="sizePolicy">
-        <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+        <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
          <horstretch>1</horstretch>
          <verstretch>0</verstretch>
         </sizepolicy>
        </property>
+       <layout class="QVBoxLayout" name="verticalLayout_2">
+        <property name="leftMargin">
+         <number>0</number>
+        </property>
+        <property name="topMargin">
+         <number>0</number>
+        </property>
+        <property name="rightMargin">
+         <number>0</number>
+        </property>
+        <property name="bottomMargin">
+         <number>0</number>
+        </property>
+        <item>
+         <widget class="QTreeView" name="treeView">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+            <horstretch>1</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QFrame" name="frame_2">
+          <property name="frameShape">
+           <enum>QFrame::WinPanel</enum>
+          </property>
+          <property name="frameShadow">
+           <enum>QFrame::Raised</enum>
+          </property>
+          <layout class="QVBoxLayout" name="verticalLayout">
+           <item>
+            <widget class="QLabel" name="statLabel">
+             <property name="text">
+              <string>Statistics</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+        </item>
+       </layout>
       </widget>
       <widget class="QSplitter" name="splitter">
        <property name="sizePolicy">
-        <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+        <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
          <horstretch>10</horstretch>
          <verstretch>0</verstretch>
         </sizepolicy>
@@ -57,7 +100,11 @@
        <property name="childrenCollapsible">
         <bool>false</bool>
        </property>
-       <widget class="LightMaps" name="mapWidget" native="true"/>
+       <widget class="LightMaps" name="mapWidget" native="true">
+        <property name="cursor">
+         <cursorShape>OpenHandCursor</cursorShape>
+        </property>
+       </widget>
        <widget class="QCustomPlot" name="graph" native="true"/>
       </widget>
      </widget>
@@ -89,7 +136,17 @@
     </property>
     <addaction name="actionAbout"/>
    </widget>
+   <widget class="QMenu" name="menuGraph">
+    <property name="title">
+     <string>Graph</string>
+    </property>
+    <addaction name="actionShow_Speed"/>
+    <addaction name="actionShow_Heart_Rate"/>
+    <addaction name="actionShow_Cadence"/>
+    <addaction name="actionShow_Elevation"/>
+   </widget>
    <addaction name="menuFile"/>
+   <addaction name="menuGraph"/>
    <addaction name="menuHelp"/>
   </widget>
   <widget class="QToolBar" name="mainToolBar">
@@ -133,6 +190,38 @@
    </property>
    <property name="toolTip">
     <string>Show in explorer...</string>
+   </property>
+  </action>
+  <action name="actionShow_Speed">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Show Speed</string>
+   </property>
+  </action>
+  <action name="actionShow_Heart_Rate">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Show Heart Rate</string>
+   </property>
+  </action>
+  <action name="actionShow_Elevation">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Show Elevation</string>
+   </property>
+  </action>
+  <action name="actionShow_Cadence">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Show Cadence</string>
    </property>
   </action>
  </widget>

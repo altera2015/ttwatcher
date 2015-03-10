@@ -40,8 +40,39 @@ bool MainWindow::processTTBin(const QString& filename)
         return false;
     }
 
-    double lat=0, lng=0, lastHeart =0;
-    int cnt=0;
+    a->setFilename( filename );
+
+    ui->statusBar->showMessage(tr("Loading Elevation Data..."));
+    m_ElevationLoader.load(a);
+
+    int distance = 0;
+
+    QTime t(0,0,0);
+    foreach ( LapPtr lap, a->laps())
+    {
+        distance += lap->length();
+        t = t.addSecs( lap->totalSeconds() );
+    }
+
+
+    QString stats = tr("Date: %1\nDistance: %2 m\nDuration: %3").arg(a->date().toString()).arg( distance ).arg(  t.toString( ));
+    ui->statLabel->setText(stats);
+
+    return true;
+}
+
+void MainWindow::onElevationLoaded(bool success, ActivityPtr activity)
+{
+    if ( activity != m_Activity )
+    {
+        return;
+    }
+
+    double centerLat=0, centerLng=0;
+    int centerCntr=0;
+
+    double lastHeart =0;
+
     ui->mapWidget->clearLines();
     ui->graph->clearGraphs();
 
@@ -51,7 +82,7 @@ bool MainWindow::processTTBin(const QString& filename)
     QVector<int> cadence;
 
     TrackPointPtr prev;
-    foreach( LapPtr lap, a->laps())
+    foreach( LapPtr lap, m_Activity->laps())
     {
 
         foreach ( TrackPointPtr tp, lap->points())
@@ -61,13 +92,13 @@ bool MainWindow::processTTBin(const QString& filename)
                 continue;
             }
 
-            lat += tp->latitude();
-            lng += tp->longitude();
-            cnt++;
+            centerLat += tp->latitude();
+            centerLng += tp->longitude();
+            centerCntr++;
 
             if (!prev && firstTime == 0 )
             {
-                prev = tp;                
+                prev = tp;
                 firstTime = tp->time().toTime_t();
                 continue;
             }
@@ -77,6 +108,9 @@ bool MainWindow::processTTBin(const QString& filename)
             prev = tp;
 
             m_Seconds.append( tp->time().toTime_t() - firstTime );
+
+            m_Elevation.append( tp->altitude() );
+
             if ( tp->heartRate() > 0 )
             {
                 m_HeartBeat.append( tp->heartRate() );
@@ -89,7 +123,7 @@ bool MainWindow::processTTBin(const QString& filename)
             m_Speed.append( tp->speed() * 3.6 );
 
 
-            if ( a->sport() == Activity::RUNNING )
+            if ( m_Activity->sport() == Activity::RUNNING )
             {
                 if ( tp->cadence() > 0 )
                 {
@@ -121,7 +155,7 @@ bool MainWindow::processTTBin(const QString& filename)
                     cadence.pop_back();
                 }
             }
-            if ( a->sport() == Activity::BIKING )
+            if ( m_Activity->sport() == Activity::BIKING )
             {
                 m_Cadence.append( tp->cadence() );
             }
@@ -132,60 +166,84 @@ bool MainWindow::processTTBin(const QString& filename)
     {
         m_Axis3 = ui->graph->axisRect(0)->addAxis(QCPAxis::atLeft);
     }
+    if ( m_Axis4 == 0 )
+    {
+        m_Axis4 = ui->graph->axisRect(0)->addAxis(QCPAxis::atRight);
+    }
 
     ui->graph->addGraph();
     ui->graph->addGraph(ui->graph->xAxis, ui->graph->yAxis2);
     ui->graph->addGraph(ui->graph->xAxis, m_Axis3);
+    ui->graph->addGraph(ui->graph->xAxis, m_Axis4);
 
 
-    ui->graph->graph(0)->setPen( QPen(Qt::red));
+    ui->graph->graph(0)->setPen( QPen(Qt::darkRed));
     ui->graph->graph(1)->setPen( QPen(Qt::blue));
-    ui->graph->graph(2)->setPen( QPen(Qt::magenta));
+    ui->graph->graph(2)->setPen( QPen(Qt::darkMagenta));
+    ui->graph->graph(3)->setPen( QPen(Qt::darkGreen));
 
     ui->graph->graph(0)->setData(m_Seconds, m_HeartBeat);
     ui->graph->graph(1)->setData(m_Seconds, m_Speed);
     ui->graph->graph(2)->setData(m_Seconds, m_Cadence);
+    ui->graph->graph(3)->setData(m_Seconds, m_Elevation);
 
-    ui->graph->yAxis->setLabel("BPM");
+    ui->graph->yAxis->setLabel("HeartRate [BPM]");
     ui->graph->yAxis->setTickPen( ui->graph->graph(0)->pen() );
     ui->graph->yAxis->setBasePen( ui->graph->graph(0)->pen() );
     ui->graph->yAxis->setLabelColor( ui->graph->graph(0)->pen().color() );
 
     ui->graph->yAxis2->setVisible(true);
-    ui->graph->yAxis2->setLabel("km/hr");
+    ui->graph->yAxis2->setLabel("Speed [km/hr]");
     ui->graph->yAxis2->setTickPen( ui->graph->graph(1)->pen() );
     ui->graph->yAxis2->setBasePen( ui->graph->graph(1)->pen() );
     ui->graph->yAxis2->setLabelColor( ui->graph->graph(1)->pen().color() );
 
-    m_Axis3->setLabel("Cadence");
+    m_Axis3->setLabel("Cadence [rpm]");
     m_Axis3->setTickPen( ui->graph->graph(2)->pen() );
     m_Axis3->setBasePen( ui->graph->graph(2)->pen() );
     m_Axis3->setLabelColor( ui->graph->graph(2)->pen().color() );
 
+    m_Axis4->setLabel("Elevation [m]");
+    m_Axis4->setTickPen( ui->graph->graph(3)->pen() );
+    m_Axis4->setBasePen( ui->graph->graph(3)->pen() );
+    m_Axis4->setLabelColor( ui->graph->graph(3)->pen().color() );
+
+
     ui->graph->xAxis->setTickLabelType(QCPAxis::ltDateTime);
     ui->graph->xAxis->setDateTimeSpec(Qt::UTC);
     ui->graph->xAxis->setDateTimeFormat("hh:mm:ss");
-    ui->graph->setInteractions(QCP::iRangeZoom);
+    ui->graph->setInteractions(QCP::iRangeZoom | QCP::iRangeDrag);
+    ui->graph->axisRect(0)->setRangeDrag(Qt::Horizontal);
+    ui->graph->axisRect(0)->setRangeZoom(Qt::Horizontal);
+
+
+    ui->graph->graph(0)->setVisible( ui->actionShow_Heart_Rate->isChecked() );
+    ui->graph->graph(1)->setVisible( ui->actionShow_Speed->isChecked() );
+    ui->graph->graph(2)->setVisible( ui->actionShow_Cadence->isChecked() );
+    ui->graph->graph(3)->setVisible( ui->actionShow_Elevation->isChecked() );
 
 
     ui->graph->rescaleAxes();
     ui->graph->replot();
 
-    ui->mapWidget->setCenter(lat/cnt, lng/cnt);
+    ui->mapWidget->setCenter(centerLat/centerCntr, centerLng/centerCntr);
 
-    QFile of(filename + ".tcx");
+    ui->statusBar->showMessage(tr("Import done."));
+
+    QFile of(m_Activity->filename() + ".tcx");
     if (!of.open(QIODevice::WriteOnly))
     {
-        ui->statusBar->showMessage(tr("Could not save tcx file %1.").arg(filename+".tcx"));
-        return false;
+        ui->statusBar->showMessage(tr("Could not save tcx file %1.").arg(m_Activity->filename()+".tcx"));
+        return;
     }
 
 
     TCXExport e;
-    e.save(&of, a);
+    e.save(&of, m_Activity);
     of.close();
-    return true;
 }
+
+
 
 QString MainWindow::ttdir() const
 {
@@ -195,9 +253,15 @@ QString MainWindow::ttdir() const
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow),
-    m_Axis3(0)
+    m_Axis3(0),
+    m_Axis4(0)
 {
     ui->setupUi(this);
+
+    ui->actionShow_Cadence->setChecked(true);
+    ui->actionShow_Elevation->setChecked(true);
+    ui->actionShow_Heart_Rate->setChecked(true);
+    ui->actionShow_Speed->setChecked(true);
 
 
     ui->actionDownload_Workouts->setEnabled(false);
@@ -205,7 +269,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->graph, SIGNAL(mouseMove(QMouseEvent*)), this, SLOT(onGraphMouseMove(QMouseEvent*)));
     connect(&m_TTManager, SIGNAL(ttArrived()), this, SLOT(onWatchesChanged()));
     connect(&m_TTManager, SIGNAL(ttRemoved()), this, SLOT(onWatchesChanged()));
-
+    connect(&m_ElevationLoader, SIGNAL(loaded(bool,ActivityPtr)), this, SLOT(onElevationLoaded(bool,ActivityPtr)));
 
     ui->mapWidget->setLatitude(59.9138204);
     ui->mapWidget->setLongitude(10.7387413);
@@ -239,6 +303,7 @@ MainWindow::~MainWindow()
     delete ui;
 }
 
+
 void MainWindow::onWatchesChanged()
 {
     ui->actionDownload_Workouts->setEnabled( m_TTManager.watches().count() > 0 );
@@ -271,16 +336,12 @@ void MainWindow::onGraphMouseMove(QMouseEvent *event)
             cadence = m_Cadence.at(idx);
         }
 
-        QString msg = QString("%1 seconds, BPM=%2, Speed=%3, Distance=%4, Cadence=%5").arg(pos).arg(pt->heartRate()).arg(pt->speed()*3.6).arg( pt->cummulativeDistance() ).arg(cadence);
+        QString msg = QString("Time=%1 s, HeartRate=%2 bpm, Speed=%3 kph, Distance=%4 m, Cadence=%5 pm, Elevation=%6").arg(pos).arg(pt->heartRate()).arg(pt->speed()*3.6).arg( pt->cummulativeDistance() ).arg(cadence).arg(pt->altitude());
         ui->statusBar->showMessage(msg,5000);
         ui->mapWidget->addCircle( pt->latitude(), pt->longitude() );
         ui->mapWidget->repaint();
         return;
-
     }
-
-    // QString msg = QString("%1 seconds").arg(pos);
-    // ui->statusBar->showMessage(msg,5000);
 }
 
 
@@ -365,4 +426,42 @@ void MainWindow::on_actionShow_in_explorer_triggered()
 void MainWindow::on_actionAbout_triggered()
 {
     QMessageBox::information(this, tr("TTWatcher"), tr("TTWatcher 1.1\nttbin tcx exporter, handles even corrupted ttbin files.\nhttps://github.com/altera2015/ttwatcher"));
+}
+
+void MainWindow::on_actionShow_Speed_toggled(bool arg1)
+{
+    if ( ui->graph->graphCount() >= 2 )
+    {
+        ui->graph->graph(1)->setVisible(arg1);
+        ui->graph->replot();
+    }
+}
+
+
+
+void MainWindow::on_actionShow_Heart_Rate_toggled(bool arg1)
+{
+    if ( ui->graph->graphCount() >= 1 )
+    {
+        ui->graph->graph(0)->setVisible(arg1);
+        ui->graph->replot();
+    }
+}
+
+void MainWindow::on_actionShow_Cadence_toggled(bool arg1)
+{
+    if ( ui->graph->graphCount() >= 3 )
+    {
+        ui->graph->graph(2)->setVisible(arg1);
+        ui->graph->replot();
+    }
+}
+
+void MainWindow::on_actionShow_Elevation_toggled(bool arg1)
+{
+    if ( ui->graph->graphCount() >= 4 )
+    {
+        ui->graph->graph(3)->setVisible(arg1);
+        ui->graph->replot();
+    }
 }

@@ -14,6 +14,7 @@ files.**
 # Releases
 
 ###1.1.0 March 11, 2015 Cleanup and Feature updates
+[Download Installer Here](https://github.com/altera2015/ttwatcher/releases/download/v1.1.0/TTWatcherSetup_x86_1.1.0.0.exe)
 
 * Added support for Cadence exporting (even during Running activity!)
 * Added support for Elevation Data

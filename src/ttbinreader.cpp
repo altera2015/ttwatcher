@@ -198,7 +198,7 @@ bool TTBinReader::readLap(QIODevice &ttbin, ActivityPtr activity)
     {
         return false;
     }
-    quint8 * data = (quint8*)buffer.data();
+    //quint8 * data = (quint8*)buffer.data();
 
     //activity->setDate( readTime(data, 2) );
 

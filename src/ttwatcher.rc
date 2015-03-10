@@ -1,10 +1,11 @@
 IDI_ICON1               ICON    DISCARDABLE     "running32.ico"
 
 #include <windows.h>
+#include "version.h"
 
 VS_VERSION_INFO VERSIONINFO
-FILEVERSION     1,1,0,0
-PRODUCTVERSION  1,1,0,0
+FILEVERSION     VER_FILEVERSION
+PRODUCTVERSION  VER_FILEVERSION
 BEGIN
     BLOCK "StringFileInfo"
     BEGIN
@@ -12,14 +13,14 @@ BEGIN
         BEGIN
             VALUE "CompanyName",        ""
             VALUE "FileDescription",    ""
-            VALUE "FileVersion",        "1.1.0.0"
+            VALUE "FileVersion",        VER_FILEVERSION_STR
             VALUE "InternalName",       ""
             VALUE "LegalCopyright",     ""
             VALUE "LegalTrademarks1",   ""
             VALUE "LegalTrademarks2",   ""
             VALUE "OriginalFilename",   "ttwatcher.exe"
             VALUE "ProductName",        "TTWatcher"
-            VALUE "ProductVersion",     "1.1.0.0"
+            VALUE "ProductVersion",     VER_FILEVERSION_STR
         END
     END
 

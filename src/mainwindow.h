@@ -59,6 +59,8 @@ private slots:
 
     void on_actionShow_Elevation_toggled(bool arg1);
 
+    void on_actionGo_to_website_triggered();
+
 private:
     Ui::MainWindow *ui;
 };

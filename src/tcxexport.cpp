@@ -1,5 +1,5 @@
 #include "tcxexport.h"
-
+#include <QDebug>
 
 TCXExport::TCXExport()
 {
@@ -7,8 +7,7 @@ TCXExport::TCXExport()
 
 void TCXExport::save(QIODevice *dev, ActivityPtr activity)
 {
-    int cadenceTotal = 0, cadenceCount = 0;
-    QDateTime cadenceStart;
+    QVector<int> cadence;
 
     QXmlStreamWriter stream(dev);
     stream.setAutoFormatting(true);
@@ -48,8 +47,6 @@ void TCXExport::save(QIODevice *dev, ActivityPtr activity)
 
         stream.writeStartElement("Track");
 
-
-
         foreach (TrackPointPtr tp, lap->points())
         {
             if ( tp->latitude() == 0 && tp->longitude() == 0 )
@@ -78,31 +75,32 @@ void TCXExport::save(QIODevice *dev, ActivityPtr activity)
 
             if ( activity->sport() == Activity::RUNNING )
             {
-                if ( cadenceTotal == 0 )
+
+                // the first trackpoint has counted steps before starting.
+                // that means the first data point will have potentially a lot of steps
+                // so skip that guy.
+
+                if ( tp->cadence() > 0 && tp != lap->points().first() )
                 {
-                    cadenceStart = tp->time(); // when the file is corrupted we don't get cadence every second. So keep track of how many cadence counts we got instead of start time.
-                    cadenceCount = 0;
-                    if ( tp->cadence() > 0 )
+                    cadence.push_front( tp->cadence() );
+                }
+
+                if ( cadence.count() > 0 )
+                {
+                    double dc = 0;
+                    foreach ( int c, cadence )
                     {
-                        cadenceTotal += tp->cadence();
-                        cadenceCount++;
+                        dc+=c;
+                    }
+                    if ( cadence.count() > 10 )
+                    {
+                        stream.writeTextElement("Cadence", QString::number( (int)(60.0 * dc / cadence.count()) ));
                     }
                 }
-                else
-                {
-                    if ( tp->cadence() >0 )
-                    {
-                        cadenceTotal += tp->cadence();
-                        cadenceCount++;
-                    }
 
-                    // int secs = cadenceStart.secsTo(tp->time());
-                    if ( cadenceCount >= 60 )
-                    {
-                        stream.writeTextElement("Cadence", QString::number(  cadenceTotal * 60 / cadenceCount  ));
-                        cadenceTotal = 0;
-                        cadenceCount = 0;
-                    }
+                while ( cadence.count() > 30 )
+                {
+                    cadence.pop_back();
                 }
             }
             if ( activity->sport() == Activity::BIKING )

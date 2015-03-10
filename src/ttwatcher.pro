@@ -39,7 +39,8 @@ HEADERS  += mainwindow.h \
     geodistance.h \
     tcxexport.h \
     qcustomplot.h \
-    elevationloader.h
+    elevationloader.h \
+    version.h
 
 FORMS    += mainwindow.ui
 

@@ -135,6 +135,7 @@
      <string>Help</string>
     </property>
     <addaction name="actionAbout"/>
+    <addaction name="actionGo_to_website"/>
    </widget>
    <widget class="QMenu" name="menuGraph">
     <property name="title">
@@ -222,6 +223,11 @@
    </property>
    <property name="text">
     <string>Show Cadence</string>
+   </property>
+  </action>
+  <action name="actionGo_to_website">
+   <property name="text">
+    <string>Go to website...</string>
    </property>
   </action>
  </widget>

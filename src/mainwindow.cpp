@@ -10,6 +10,7 @@
 
 #include "ttbinreader.h"
 #include "tcxexport.h"
+#include "version.h"
 
 bool MainWindow::processTTBin(const QString& filename)
 {
@@ -163,7 +164,7 @@ void MainWindow::onElevationLoaded(bool success, ActivityPtr activity)
                 {
                     m_Cadence.append(0);
                 }
-                while ( cadence.count() > 60 )
+                while ( cadence.count() > 30 )
                 {
                     cadence.pop_back();
                 }
@@ -441,7 +442,7 @@ void MainWindow::on_actionShow_in_explorer_triggered()
 
 void MainWindow::on_actionAbout_triggered()
 {
-    QMessageBox::information(this, tr("TTWatcher"), tr("TTWatcher 1.1\nttbin tcx exporter, handles even corrupted ttbin files.\nhttps://github.com/altera2015/ttwatcher"));
+    QMessageBox::information(this, tr("TTWatcher"), tr("TTWatcher %1\n\nttbin tcx exporter, handles even corrupted ttbin files.\nhttps://github.com/altera2015/ttwatcher").arg(VER_FILEVERSION_STR));
 }
 
 void MainWindow::on_actionShow_Speed_toggled(bool arg1)
@@ -480,4 +481,9 @@ void MainWindow::on_actionShow_Elevation_toggled(bool arg1)
         ui->graph->graph(3)->setVisible(arg1);
         ui->graph->replot();
     }
+}
+
+void MainWindow::on_actionGo_to_website_triggered()
+{
+    QDesktopServices::openUrl( QUrl("https://github.com/altera2015/ttwatcher") );
 }

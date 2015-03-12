@@ -26,6 +26,7 @@ LicenseFile=LICENSE
 OutputBaseFilename=TTWatcherSetup_x86_{#ApplicationVersion}
 Compression=lzma
 SolidCompression=yes
+OutputDir=.
 
 
 [Languages]

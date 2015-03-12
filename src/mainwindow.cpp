@@ -264,6 +264,26 @@ QString MainWindow::ttdir() const
     return QDir::homePath() + QDir::separator() + "TomTom MySports";
 }
 
+void MainWindow::dragEnterEvent(QDragEnterEvent *e)
+{
+    if ( e->mimeData()->hasUrls())
+    {
+        e->acceptProposedAction();
+    }
+}
+
+void MainWindow::dropEvent(QDropEvent *e)
+{
+    foreach (const QUrl &url, e->mimeData()->urls())
+    {
+        if ( url.isLocalFile() )
+        {
+            processTTBin(url.toLocalFile());
+            return;
+        }
+    }
+}
+
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow),
@@ -271,6 +291,8 @@ MainWindow::MainWindow(QWidget *parent) :
     m_Axis4(0)
 {
     ui->setupUi(this);
+
+    setAcceptDrops(true);
 
     ui->actionShow_Cadence->setChecked(true);
     ui->actionShow_Elevation->setChecked(true);

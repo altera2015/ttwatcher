@@ -28,6 +28,8 @@ class MainWindow : public QMainWindow
     QCPAxis * m_Axis3;
     QCPAxis * m_Axis4;
     ElevationLoader m_ElevationLoader;
+    void dragEnterEvent(QDragEnterEvent *e);
+    void dropEvent(QDropEvent *e);
 public:
     explicit MainWindow(QWidget *parent = 0);
     ~MainWindow();

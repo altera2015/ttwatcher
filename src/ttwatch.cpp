@@ -10,8 +10,8 @@
 #define TT_DELETE_FILE          0x03
 #define TT_WRITE_FILE           0x04
 
-#define TT_OPEN_FILE            0x05
-#define TT_FILE_EXISTS          0x06
+#define TT_GET_FILE_SIZE        0x05
+#define TT_OPEN_FILE_READ       0x06
 #define TT_READ_FILE            0x07
 #define TT_CLOSE_FILE           0x0C
 
@@ -23,6 +23,21 @@
 #define TT_GET_VERSION          0x21 // responds with 01 08 07 21 31 2E 38 2E 32 35 radix: ascii: ...!1.8.25
 
 #define TT_GET_BATTERY_LEVEL    0x23
+
+
+#define FILE_SYSTEM_FIRMWARE        (0x000000f0)
+#define FILE_GPSQUICKFIX_DATA       (0x00010100)
+#define FILE_GPS_FIRMWARE           (0x00010200)
+#define FILE_FIRMWARE_UPDATE_LOG    (0x00013001)
+#define FILE_MANIFEST1              (0x00850000)
+#define FILE_MANIFEST2              (0x00850001)
+#define FILE_PREFERENCES_XML        (0x00f20000)
+#define FILE_TYPE_MASK              (0xffff0000)
+#define FILE_RACE_DATA              (0x00710000)
+#define FILE_RACE_HISTORY_DATA      (0x00720000)
+#define FILE_HISTORY_DATA           (0x00730000)
+#define FILE_HISTORY_SUMMARY        (0x00830000)
+#define FILE_TTBIN_DATA             (0x00910000)
 
 /* File 00010100 contains GPS Quickfix data.
  * This can be downloaded from http://gpsquickfix.services.tomtom.com/fitness/sifgps.f2p3enc.ee
@@ -37,6 +52,15 @@
 
 // 0x0D (0 0), 0x0A (0 0), 0x22 (0 0), 0x22 (0 0), 0x20 (0 0), 0x0a (0 0) during startup.
 
+quint32 TTWatch::readquint32(const QByteArray &data, int offset) const
+{
+    quint32 d = ((quint8)data.at(offset+0) << 24) |
+                ((quint8)data.at(offset+1) << 16) |
+                ((quint8)data.at(offset+2) << 8) |
+                ((quint8)data.at(offset+3) << 0);
+    return d;
+}
+
 bool TTWatch::sendCommand(const QByteArray &command, QByteArray &response)
 {
     response.clear();
@@ -49,9 +73,10 @@ bool TTWatch::sendCommand(const QByteArray &command, QByteArray &response)
     quint8 data[64];
     memset(data,0, 64);
     data[0] = 9; // report
-    data[1] = command.length();
+    data[1] = command.length()+1;
     data[2] = m_Counter++;
     memcpy(data+3, command.data(), command.length());
+
 
     if ( hid_write( m_Device, data, 64) < 64 )
     {
@@ -82,25 +107,18 @@ void TTWatch::appendId(QByteArray &dest, const TTFile &file)
     dest.append((char) (file.id & 0xff ) );
 }
 
-void TTWatch::buildCommand(QByteArray &dest, quint8 command, quint8 sub, const TTFile &file)
-{
-    dest.append((char)command);
-    dest.append((char)sub);
-    appendId(dest, file);
-}
-
-void TTWatch::buildShortCommand(QByteArray &dest, quint8 command,const TTFile &file)
+void TTWatch::buildCommand(QByteArray &dest, quint8 command,const TTFile &file)
 {
     dest.append((char)command);
     appendId(dest, file);
 }
 
-bool TTWatch::_openFile(const TTFile &file)
+bool TTWatch::_openFile(TTFile &file)
 {
     QByteArray openFile1, openFile2, response;
 
-    buildCommand(openFile1, TT_FILE_EXISTS, 0, file);
-    buildCommand(openFile2, TT_OPEN_FILE, 0, file);
+    buildCommand(openFile1, TT_OPEN_FILE_READ, file);
+    buildCommand(openFile2, TT_GET_FILE_SIZE, file);
 
     if (!sendCommand(openFile1, response))
     {
@@ -124,6 +142,7 @@ bool TTWatch::_openFile(const TTFile &file)
         return false;
     }
 
+    file.length = readquint32(response, 13);
 
     return true;
 }
@@ -133,7 +152,7 @@ bool TTWatch::_readFile(QByteArray &dest, const TTFile &file, bool processEvents
     dest.clear();
     const quint8 maxReadSize = 0x32;
     QByteArray read, response;
-    buildCommand(read, TT_READ_FILE, 0, file);
+    buildCommand(read, TT_READ_FILE, file);
 
     for ( quint32 pos = 0 ; pos < file.length; pos+= maxReadSize )
     {
@@ -171,7 +190,7 @@ bool TTWatch::_createFile(const TTFile &file)
 
     _deleteFile(file);
 
-    buildCommand(createFile, TT_CREATE_FILE, 0, file);
+    buildCommand(createFile, TT_CREATE_FILE, file);
     if (!sendCommand(createFile, response))
     {
         return false;
@@ -193,7 +212,7 @@ bool TTWatch::_writeFile(const QByteArray &source, const TTFile &file, bool proc
     const quint8 maxWriteSize = 0x36;
     QByteArray writeCommand, response;
 
-    buildShortCommand(writeCommand, TT_WRITE_FILE, file);
+    buildCommand(writeCommand, TT_WRITE_FILE, file);
 
     for ( int pos = 0 ; pos < source.length(); pos+= maxWriteSize )
     {
@@ -222,7 +241,7 @@ bool TTWatch::_writeFile(const QByteArray &source, const TTFile &file, bool proc
 bool TTWatch::_closeFile(const TTFile &file)
 {
     QByteArray closeFile, response;
-    buildCommand(closeFile, TT_CLOSE_FILE, 0, file);
+    buildCommand(closeFile, TT_CLOSE_FILE, file);
 
     if (!sendCommand(closeFile, response))
     {
@@ -235,7 +254,7 @@ bool TTWatch::_closeFile(const TTFile &file)
 bool TTWatch::_deleteFile(const TTFile &file)
 {
     QByteArray deleteFile, response;
-    buildCommand(deleteFile, TT_DELETE_FILE, 0, file);
+    buildCommand(deleteFile, TT_DELETE_FILE, file);
 
     if (!sendCommand(deleteFile, response))
     {
@@ -250,7 +269,7 @@ TTWatch::TTWatch(const QString &path, const QString &serial, QObject *parent) :
     m_Path(path),
     m_Serial(serial),
     m_Device(0),
-    m_Counter(0)
+    m_Counter(1)
 {
 }
 
@@ -337,10 +356,10 @@ bool TTWatch::listFiles(TTFileList &fl)
                    ( (quint8)response[15] << 8) |
                    ( (quint8)response[16] );
 
-        f.id =  ( (quint8)response[6] << 24) |
-                ( (quint8)response[7] << 16) |
-                ( (quint8)response[8] << 8) |
-                ( (quint8)response[9] );
+        f.id =  ( (quint8)response[5] << 24) |
+                ( (quint8)response[6] << 16) |
+                ( (quint8)response[7] << 8) |
+                ( (quint8)response[8] );
 
 
         qDebug() << f.length << QString::number(f.id, 16) << response.toHex();
@@ -351,18 +370,19 @@ bool TTWatch::listFiles(TTFileList &fl)
     return false;
 }
 
-bool TTWatch::deleteFile(const TTFile &file)
+bool TTWatch::deleteFile(quint32 fileId)
 {
     if ( m_Device == 0 )
     {
         qWarning() << "TTWatch::deleteFile / called without opening first.";
         return false;
     }
-
-    return _deleteFile(file);
+    TTFile f;
+    f.id = fileId;
+    return _deleteFile(f);
 }
 
-bool TTWatch::readFile(QByteArray &data, const TTFile &file, bool processEvents)
+bool TTWatch::readFile(QByteArray &data, quint32 fileId, bool processEvents)
 {
     if ( m_Device == 0 )
     {
@@ -370,19 +390,23 @@ bool TTWatch::readFile(QByteArray &data, const TTFile &file, bool processEvents)
         return false;
     }
 
-    if ( !_openFile(file))
+    TTFile f;
+    f.id = fileId;
+    f.length = 0;
+
+    if ( !_openFile(f))
     {
         return false;
     }
 
-    bool result = _readFile(data, file, processEvents);
+    bool result = _readFile(data, f, processEvents);
 
-    _closeFile(file);
+    _closeFile(f);
 
     return result;
 }
 
-bool TTWatch::writeFile(const QByteArray &source, const TTFile &file, bool processEvents)
+bool TTWatch::writeFile(const QByteArray &source, quint32 fileId, bool processEvents)
 {
     if ( m_Device == 0 )
     {
@@ -390,14 +414,18 @@ bool TTWatch::writeFile(const QByteArray &source, const TTFile &file, bool proce
         return false;
     }
 
-    if ( !_createFile(file))
+    TTFile f;
+    f.id = fileId;
+    f.length = source.size();
+
+    if ( !_createFile(f))
     {
         return false;
     }
 
-    bool result = _writeFile(source, file, processEvents);
+    bool result = _writeFile(source, f, processEvents);
 
-    _closeFile(file);
+    _closeFile(f);
 
     return result;
 }
@@ -424,6 +452,18 @@ int TTWatch::batteryLevel()
     return (quint8)response.at(1);
 }
 
+bool TTWatch::getPreferences(QByteArray &data)
+{
+    if ( m_Device == 0 )
+    {
+        qWarning() << "TTWatch::getPreferences / called without opening first.";
+        return false;
+    }
+
+
+    return readFile(data, FILE_PREFERENCES_XML, true );
+}
+
 int TTWatch::download(const QString &basePath, bool deleteWhenDone)
 {
     TTFileList fl;
@@ -437,20 +477,21 @@ int TTWatch::download(const QString &basePath, bool deleteWhenDone)
 
     foreach ( const TTFile & file, fl)
     {
-        if (! (( ( file.id & 0xFF000000) == 0x91000000 ) && file.length > 100 ) )
+        if (! (( ( file.id & FILE_TYPE_MASK) == FILE_TTBIN_DATA ) && file.length > 100 ) )
         {
+            qDebug() << QString("No Downloading %1, len = %2").arg(QString::number(file.id,16)).arg(file.length);
             continue;
         }
 
         QByteArray fileData;
 
-        if ( !readFile( fileData, file, true ) )
+        if ( !readFile( fileData, file.id, true ) )
         {
             qWarning() << "TTWatch::download / failed to download " << file.id;
             continue;
         }
 
-        if ( fileData.length() < 100 )
+        if ( fileData.length() < fl.size() )
         {
             qWarning() << "TTWatch::download / no data in file " << file.id;
             continue;
@@ -498,7 +539,7 @@ int TTWatch::download(const QString &basePath, bool deleteWhenDone)
 
         if ( deleteWhenDone )
         {
-            if (!deleteFile( file ))
+            if (!deleteFile( file.id ))
             {
                 qWarning() << "TTWatch::download / could not delete file on TT " << file.id;
             }

@@ -19,12 +19,13 @@ class TTWatch : public QObject
     hid_device * m_Device;
     quint8 m_Counter;
 
+    quint32 readquint32( const QByteArray &data, int offset ) const;
     bool sendCommand( const QByteArray & command, QByteArray & response );
     static void appendId( QByteArray & dest, const TTFile & file);
-    static void buildCommand( QByteArray &dest, quint8 command, quint8 sub, const TTFile & file);
-    static void buildShortCommand(QByteArray &dest, quint8 command, const TTFile & file);
 
-    bool _openFile( const TTFile & file );
+    static void buildCommand(QByteArray &dest, quint8 command, const TTFile & file);
+
+    bool _openFile( TTFile & file );
     bool _readFile( QByteArray &dest, const TTFile & file, bool processEvents = false );
     bool _createFile(const TTFile &file );
     bool _writeFile( const QByteArray & source, const TTFile & file, bool processEvents = false);
@@ -40,10 +41,11 @@ public:
     bool open();
     bool close();
     bool listFiles( TTFileList & fl );
-    bool deleteFile( const TTFile & file );
-    bool readFile(QByteArray & data , const TTFile & file, bool processEvents = false);
-    bool writeFile(const QByteArray & source, const TTFile &file, bool processEvents = false);
+    bool deleteFile( quint32 fileId );
+    bool readFile(QByteArray & data , quint32 fileId, bool processEvents = false);
+    bool writeFile(const QByteArray & source, quint32 fileId, bool processEvents = false);
     int batteryLevel();
+    bool getPreferences( QByteArray & data );
 
     // convenience functions
     int download( const QString & basePath, bool deleteWhenDone );

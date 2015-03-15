@@ -3,6 +3,11 @@
 
 #include <QObject>
 #include <QList>
+#include <QUrl>
+#include <QStringList>
+
+#include "watchpreferences.h"
+
 #include "hidapi.h"
 
 typedef struct ttfile {
@@ -18,6 +23,7 @@ class TTWatch : public QObject
     QString m_Serial;
     hid_device * m_Device;
     quint8 m_Counter;
+    WatchPreferences m_Preferences;
 
     quint32 readquint32( const QByteArray &data, int offset ) const;
     bool sendCommand( const QByteArray & command, QByteArray & response );
@@ -32,23 +38,67 @@ class TTWatch : public QObject
     bool _closeFile( const TTFile & file );
     bool _deleteFile( const TTFile & file );
 
+    class WatchOpener {
+        TTWatch * m_Watch;
+        bool m_ShouldClose;
+    public:
+        WatchOpener( TTWatch * watch ) : m_Watch(watch), m_ShouldClose(false) {
+
+        }
+        ~WatchOpener() {
+            if ( m_ShouldClose )
+            {
+                m_Watch->close();
+            }
+        }
+
+        bool open( ) {
+            if ( m_Watch->isOpen() )
+            {
+                return true;
+            }
+            if ( m_Watch->open() )
+            {
+                m_ShouldClose = true;
+                return true;
+            }
+            return false;
+        }
+
+        bool close() {
+            m_Watch->close();
+        }
+    };
+
 public:
     explicit TTWatch(const QString & path, const QString & serial, QObject *parent = 0);
     virtual ~TTWatch();
 
     QString path() const;
+    QString serial() const;
+    WatchPreferences & preferences();
 
     bool open();
+    bool isOpen() const;
     bool close();
     bool listFiles( TTFileList & fl );
     bool deleteFile( quint32 fileId );
     bool readFile(QByteArray & data , quint32 fileId, bool processEvents = false);
     bool writeFile(const QByteArray & source, quint32 fileId, bool processEvents = false);
-    int batteryLevel();
-    bool getPreferences( QByteArray & data );
+    int batteryLevel();    
+    bool loadPreferences();
+    bool exportFile( const QString & filename );
 
     // convenience functions
-    int download( const QString & basePath, bool deleteWhenDone );
+    QStringList download( const QString & basePath, bool deleteWhenDone );
+
+    QString encodeToken( const QByteArray & token );
+    QByteArray decodeToken( const QString & token );
+    QByteArray scrambleToken( const QByteArray & token );
+
+private slots:
+    void exportFinished( bool success, QString message, QUrl url );
+    void setupFinished( bool success );
 
 };
 

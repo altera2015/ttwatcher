@@ -125,7 +125,6 @@
      <string>File</string>
     </property>
     <addaction name="actionProcess_TTBIN"/>
-    <addaction name="actionDownload_Workouts"/>
     <addaction name="actionShow_in_explorer"/>
     <addaction name="separator"/>
     <addaction name="actionExit"/>
@@ -159,7 +158,7 @@
    </attribute>
    <addaction name="actionProcess_TTBIN"/>
    <addaction name="actionShow_in_explorer"/>
-   <addaction name="actionDownload_Workouts"/>
+   <addaction name="actionExport_Activity"/>
   </widget>
   <widget class="QStatusBar" name="statusBar"/>
   <action name="actionProcess_TTBIN">
@@ -228,6 +227,11 @@
   <action name="actionGo_to_website">
    <property name="text">
     <string>Go to website...</string>
+   </property>
+  </action>
+  <action name="actionExport_Activity">
+   <property name="text">
+    <string>Export Activity</string>
    </property>
   </action>
  </widget>

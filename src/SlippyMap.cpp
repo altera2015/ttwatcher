@@ -243,7 +243,7 @@ void SlippyMap::download()
 {
     if (! m_url.isEmpty() )
     {
-        qDebug() << "already downloading abort...";
+        // qDebug() << "already downloading abort...";
         return;
     }
 

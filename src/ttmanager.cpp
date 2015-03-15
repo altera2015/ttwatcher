@@ -102,6 +102,18 @@ const TTWatchList &TTManager::watches()
     return m_TTWatchList;
 }
 
+TTWatch *TTManager::watch(const QString &serial)
+{
+    foreach ( TTWatch * watch, m_TTWatchList)
+    {
+        if ( watch->serial() == serial )
+        {
+            return watch;
+        }
+    }
+    return 0;
+}
+
 TTWatch *TTManager::find(const QString &path)
 {
     TTWatchList::iterator i = m_TTWatchList.begin();

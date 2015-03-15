@@ -5,6 +5,12 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QCoreApplication>
+#include <QDesktopServices>
+#include <QBuffer>
+#include <QByteArray>
+
+#include "ttbinreader.h"
+#include "tcxexport.h"
 
 #define TT_CREATE_FILE          0x02
 #define TT_DELETE_FILE          0x03
@@ -224,9 +230,8 @@ bool TTWatch::_writeFile(const QByteArray &source, const TTFile &file, bool proc
         quint8 len = qMin( (quint32)maxWriteSize, quint32(source.length() - pos) );
         QByteArray cmd = writeCommand;
         cmd += source.mid(pos, len);
-        cmd.append((char)0); // hardware sillyness, it appears it needs an extra byte at
-        // the end to make this work. Without this byte it will not write the actual last byte in
-        // each command.
+
+        // test writing.
 
         if ( !sendCommand(cmd, response))
         {
@@ -271,6 +276,8 @@ TTWatch::TTWatch(const QString &path, const QString &serial, QObject *parent) :
     m_Device(0),
     m_Counter(1)
 {
+    connect(&m_Preferences, SIGNAL(setupFinished(bool)), this, SLOT(setupFinished(bool)));
+    connect(&m_Preferences, SIGNAL(exportFinished(bool,QString,QUrl)), this, SLOT(exportFinished(bool,QString,QUrl)));
 }
 
 TTWatch::~TTWatch()
@@ -283,6 +290,16 @@ QString TTWatch::path() const
     return m_Path;
 }
 
+QString TTWatch::serial() const
+{
+    return m_Serial;
+}
+
+WatchPreferences &TTWatch::preferences()
+{
+    return m_Preferences;
+}
+
 bool TTWatch::open()
 {
     if ( m_Device )
@@ -293,6 +310,11 @@ bool TTWatch::open()
     m_Device = hid_open_path( m_Path.toLocal8Bit().data() );
     m_Counter = 0;
     return ( m_Device != 0 );
+}
+
+bool TTWatch::isOpen() const
+{
+    return m_Device != 0;
 }
 
 bool TTWatch::close()
@@ -310,9 +332,10 @@ bool TTWatch::close()
 
 bool TTWatch::listFiles(TTFileList &fl)
 {
-    if ( m_Device == 0 )
+    WatchOpener wo(this);
+    if ( !wo.open() )
     {
-        qDebug() << "TTWatch::listFiles / called without opening first.";
+        qWarning() << "TTWatch::listFiles / failed to open.";
         return false;
     }
 
@@ -372,11 +395,13 @@ bool TTWatch::listFiles(TTFileList &fl)
 
 bool TTWatch::deleteFile(quint32 fileId)
 {
-    if ( m_Device == 0 )
+    WatchOpener wo(this);
+    if ( !wo.open() )
     {
-        qWarning() << "TTWatch::deleteFile / called without opening first.";
+        qWarning() << "TTWatch::deleteFile / failed to open.";
         return false;
     }
+
     TTFile f;
     f.id = fileId;
     return _deleteFile(f);
@@ -384,9 +409,10 @@ bool TTWatch::deleteFile(quint32 fileId)
 
 bool TTWatch::readFile(QByteArray &data, quint32 fileId, bool processEvents)
 {
-    if ( m_Device == 0 )
+    WatchOpener wo(this);
+    if ( !wo.open() )
     {
-        qWarning() << "TTWatch::listFiles / called without opening first.";
+        qWarning() << "TTWatch::readFile / failed to open.";
         return false;
     }
 
@@ -408,9 +434,10 @@ bool TTWatch::readFile(QByteArray &data, quint32 fileId, bool processEvents)
 
 bool TTWatch::writeFile(const QByteArray &source, quint32 fileId, bool processEvents)
 {
-    if ( m_Device == 0 )
+    WatchOpener wo(this);
+    if ( !wo.open() )
     {
-        qWarning() << "TTWatch::listFiles / called without opening first.";
+        qWarning() << "TTWatch::writeFile / failed to open.";
         return false;
     }
 
@@ -432,10 +459,11 @@ bool TTWatch::writeFile(const QByteArray &source, quint32 fileId, bool processEv
 
 int TTWatch::batteryLevel()
 {
-    if ( m_Device == 0 )
+    WatchOpener wo(this);
+    if ( !wo.open() )
     {
-        qWarning() << "TTWatch::batteryLevel / called without opening first.";
-        return -1;
+        qWarning() << "TTWatch::batteryLevel / failed to open.";
+        return false;
     }
 
     QByteArray command, response;
@@ -452,34 +480,72 @@ int TTWatch::batteryLevel()
     return (quint8)response.at(1);
 }
 
-bool TTWatch::getPreferences(QByteArray &data)
+
+bool TTWatch::loadPreferences()
 {
-    if ( m_Device == 0 )
+    WatchOpener wo(this);
+    if ( !wo.open() )
     {
-        qWarning() << "TTWatch::getPreferences / called without opening first.";
+        qWarning() << "TTWatch::loadPreferences / failed to open.";
         return false;
     }
 
+    QByteArray data;
+    if ( readFile(data, FILE_PREFERENCES_XML, true ) )
+    {
+        return m_Preferences.parsePreferences(this, data);
+    }
 
-    return readFile(data, FILE_PREFERENCES_XML, true );
+    return false;
+
 }
 
-int TTWatch::download(const QString &basePath, bool deleteWhenDone)
+bool TTWatch::exportFile(const QString &filename)
 {
+    QFile f(filename);
+    if ( f.open(QIODevice::ReadOnly))
+    {
+        return false;
+    }
+    TTBinReader br;
+    ActivityPtr a = br.read(f, true);
+    if ( !a )
+    {
+        return false;
+    }
+
+    foreach ( IActivityExporterPtr ae, m_Preferences.exporters() )
+    {
+        if ( ae->isEnabled() )
+        {
+            ae->exportActivity(a);
+        }
+    }
+}
+
+QStringList TTWatch::download(const QString &basePath, bool deleteWhenDone)
+{
+    QStringList files;
+
+    WatchOpener wo(this);
+    if ( !wo.open() )
+    {
+        qWarning() << "TTWatch::download / failed to open.";
+        return files;
+    }
+
     TTFileList fl;
 
     if (!listFiles(fl))
     {
-        return -1;
+        return files;
     }
-
-    int count = 0;
 
     foreach ( const TTFile & file, fl)
     {
         if (! (( ( file.id & FILE_TYPE_MASK) == FILE_TTBIN_DATA ) && file.length > 100 ) )
         {
-            qDebug() << QString("No Downloading %1, len = %2").arg(QString::number(file.id,16)).arg(file.length);
+            qDebug() << QString("Not Downloading %1, len = %2").arg(QString::number(file.id,16)).arg(file.length);
             continue;
         }
 
@@ -535,7 +601,8 @@ int TTWatch::download(const QString &basePath, bool deleteWhenDone)
 
         f.write(fileData);
         f.close();
-        count++;
+
+        files.append(filename);
 
         if ( deleteWhenDone )
         {
@@ -546,5 +613,102 @@ int TTWatch::download(const QString &basePath, bool deleteWhenDone)
         }
     }
 
-    return count;
+    return files;
+}
+
+QString TTWatch::encodeToken(const QByteArray &token)
+{
+    QByteArray dest = scrambleToken( token );
+
+    QString result;
+    foreach ( char c, dest )
+    {
+        result.append(QChar(c));
+    }
+
+    return result;
+}
+
+
+QByteArray TTWatch::decodeToken(const QString &token)
+{
+    QByteArray source;
+
+    foreach ( QChar c, token )
+    {
+        source.append( c.toLatin1() );
+    }
+
+    return scrambleToken(source);
+}
+
+QByteArray TTWatch::scrambleToken(const QByteArray &sourceToken)
+{
+    QByteArray key;
+    key.append( m_Serial.toLatin1() );
+    while ( key.length() < sourceToken.length() )
+    {
+        key.append( char( 0x56 ) );
+        key.append( char( 0x33 ) );
+        key.append( char( 0x49 ) );
+        key.append( char( 0x37 ) );
+        key.append( char( 0x4b ) );
+        key.append( char( 0x30 ) );
+        key.append( char( 0x49 ) );
+        key.append( char( 0x39 ) );
+        key.append( char( 0x4e ) );
+        key.append( char( 0x34 ) );
+        key.append( char( 0x47 ) );
+        key.append( char( 0x30 ) );
+    }
+
+    QByteArray scrambledToken;
+
+    for ( int i=0;i<sourceToken.length();i++)
+    {
+        quint8 sc, kc;
+        sc = (quint8)sourceToken.at(i);
+        kc = (quint8)key.at(i);
+        scrambledToken.append((char) ( sc ^ kc ));
+    }
+
+    return scrambledToken;
+}
+
+void TTWatch::exportFinished(bool success, QString message, QUrl url)
+{
+    if ( success )
+    {
+        QDesktopServices::openUrl(url);
+    }
+}
+
+void TTWatch::setupFinished(bool success)
+{
+    if ( !success )
+    {
+        return;
+    }
+
+    WatchOpener wo(this);
+    if ( !wo.open() )
+    {
+        qWarning() << "TTWatch::setupFinished / failed to open.";
+        return;
+    }
+
+    QByteArray sourceXml;
+    if ( !readFile(sourceXml,FILE_PREFERENCES_XML, true) )
+    {
+        qDebug() << "TTWatch::setupFinished / could not read settings.";
+        return;
+    }
+
+    QByteArray updatedXml = m_Preferences.updatePreferences(this, sourceXml);
+
+    if ( !writeFile(updatedXml, FILE_PREFERENCES_XML, true))
+    {
+        qDebug() << "TTWatch::setupFinished / could not write settings.";
+        return;
+    }
 }

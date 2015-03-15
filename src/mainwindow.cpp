@@ -11,6 +11,7 @@
 #include "ttbinreader.h"
 #include "tcxexport.h"
 #include "version.h"
+#include "singleshot.h"
 
 bool MainWindow::processTTBin(const QString& filename)
 {
@@ -313,8 +314,10 @@ MainWindow::MainWindow(QWidget *parent) :
 #ifdef I_UNDERSTAND_THIS_IS_DANGEROUS
     m_TTManager.startSearch();
     ui->actionDownload_Workouts->setVisible(true);
+    ui->actionExport_Activity->setVisible(true);
 #else
     ui->actionDownload_Workouts->setVisible(false);
+    ui->actionExport_Activity->setVisible(false);
 #endif
 
 
@@ -343,6 +346,42 @@ MainWindow::~MainWindow()
 void MainWindow::onWatchesChanged()
 {
     ui->actionDownload_Workouts->setEnabled( m_TTManager.watches().count() > 0 );
+    foreach ( TTWatch * watch, m_TTManager.watches())
+    {
+        if (  watch->preferences().name() == "" )
+        {
+            watch->loadPreferences();
+            QStringList files = watch->download(ttdir() + QDir::separator() + watch->preferences().name(), true);
+            QString serial = watch->serial();
+
+            SingleShot::go([this, files, serial](){
+
+                TTWatch * watch = m_TTManager.watch(serial);
+                if ( !watch )
+                {
+                    return;
+                }
+
+                if ( files.count() > 0 )
+                {
+                    qDebug() << "Downloaded: " << files;
+
+                    foreach ( QString file, files )
+                    {
+                        watch->exportFile( file );
+                    }
+
+                    QModelIndex index = m_FSModel->index( files.first() );
+                    if ( index.isValid() )
+                    {
+                        ui->treeView->setCurrentIndex(index);
+                        ui->treeView->scrollTo(index);
+                    }
+                }
+
+            }, 1000, true, this);
+        }
+    }
 }
 
 void MainWindow::onGraphMouseMove(QMouseEvent *event)
@@ -444,7 +483,8 @@ void MainWindow::on_actionDownload_Workouts_triggered()
         return;
     }
 
-    watch->download(ttdir() + QDir::separator() + "ttwatcher", false);
+    // watch->download(ttdir() + QDir::separator() + "ttwatcher", false);
+    watch->loadPreferences();
     watch->close();
 }
 
@@ -508,4 +548,34 @@ void MainWindow::on_actionShow_Elevation_toggled(bool arg1)
 void MainWindow::on_actionGo_to_website_triggered()
 {
     QDesktopServices::openUrl( QUrl("https://github.com/altera2015/ttwatcher") );
+}
+
+void MainWindow::on_actionExport_Activity_triggered()
+{
+    if ( !m_Activity)
+    {
+        return;
+    }
+
+    if ( m_TTManager.watches().count()== 0)
+    {
+        ui->statusBar->showMessage(tr("No TT watch detected."));
+        return;
+    }
+
+    TTWatch * watch = m_TTManager.watches().first();
+
+    if ( watch->preferences().name() == "" )
+    {
+        watch->loadPreferences();
+    }
+
+    IActivityExporterPtr exp = watch->preferences().exporter("Strava");
+    if (exp)
+    {
+        exp->exportActivity(m_Activity);
+        // exp->setup(this);
+    }
+
+    watch->close();
 }

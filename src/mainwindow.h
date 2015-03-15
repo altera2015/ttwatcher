@@ -63,6 +63,8 @@ private slots:
 
     void on_actionGo_to_website_triggered();
 
+    void on_actionExport_Activity_triggered();
+
 private:
     Ui::MainWindow *ui;
 };

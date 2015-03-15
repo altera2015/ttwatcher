@@ -3,4 +3,11 @@
         <file>running24.png</file>
         <file>running32.png</file>
     </qresource>
+    <qresource prefix="/html">
+        <file>404.html</file>
+        <file>strava.html</file>
+    </qresource>
+    <qresource prefix="/html/data">
+        <file>running32.png</file>
+    </qresource>
 </RCC>

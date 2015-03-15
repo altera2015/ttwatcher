@@ -39,6 +39,7 @@ Original inspiration from:
 * Running man Icon made by http://www.freepik.com" is licensed under Creative Commons BY 3.0 CC BY 3.0
 * QCustomPlot, an easy to use, modern plotting widget for Qt, Copyright (C) 2011, 2012, 2013, 2014 Emanuel Eichhammer http://www.qcustomplot.com/
 * Built with Qt 5.4 LGPL http://www.qt-project.org
+* qhttpserver from https://github.com/nikhilm/qhttpserver
 
 # Building
 

@@ -24,6 +24,8 @@ public:
     virtual ~TTManager();
     void startSearch();
     const TTWatchList & watches();
+    TTWatch * watch( const QString & serial );
+
 
 
 

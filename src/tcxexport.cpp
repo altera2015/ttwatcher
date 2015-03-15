@@ -59,12 +59,15 @@ void TCXExport::save(QIODevice *dev, ActivityPtr activity)
 
             stream.writeTextElement("Time", tp->time().toUTC().toString(Qt::ISODate));
             stream.writeStartElement("Position");
-            stream.writeTextElement("LatitudeDegrees", QString::number(tp->latitude()) );
-            stream.writeTextElement("LongitudeDegrees", QString::number(tp->longitude()) );
+            stream.writeTextElement("LatitudeDegrees", QString::number(tp->latitude(),'f',9) );
+            stream.writeTextElement("LongitudeDegrees", QString::number(tp->longitude(),'f',9) );
             stream.writeEndElement(); // Position.
 
-            stream.writeTextElement("AltitudeMeters", QString::number(tp->altitude()) );
-            stream.writeTextElement("DistanceMeters", QString::number(tp->cummulativeDistance()));
+            if ( tp->altitude() > 0.0 )
+            {
+                stream.writeTextElement("AltitudeMeters", QString::number(tp->altitude(),'f',9) );
+            }
+            stream.writeTextElement("DistanceMeters", QString::number(tp->cummulativeDistance(),'f',9));
 
             if ( tp->heartRate() >= 0 )
             {
@@ -116,6 +119,15 @@ void TCXExport::save(QIODevice *dev, ActivityPtr activity)
 
         stream.writeEndElement(); // lap.
     }
+
+    stream.writeStartElement("Creator");
+    stream.writeAttribute("xsi","type","Device_t");
+    stream.writeTextElement("Name", "TomTom GPS Sport Watch");
+    stream.writeTextElement("UnitId", "0");
+    stream.writeTextElement("ProductID", "0");
+    stream.writeEndElement();
+
+
 
 
     stream.writeEndElement(); // activity

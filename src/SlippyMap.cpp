@@ -187,6 +187,7 @@ void SlippyMap::processTile(QPoint &tp, QByteArray &data)
     if (!img.loadFromData(data)) //(!img.load(reply, 0))
     {
         // download(tp); infinite recursion, handle errors a bit better.
+        qDebug() << "processTile could not load data ";
     }
     else
     {
@@ -221,7 +222,7 @@ void SlippyMap::handleNetworkData(QNetworkReply *reply)
     m_ActiveRequests.removeOne(reply);
 
     if (!reply->error())
-    {
+    {        
         QByteArray data = reply->readAll();
         processTile(tp, data);
     }
@@ -229,7 +230,7 @@ void SlippyMap::handleNetworkData(QNetworkReply *reply)
     {
         qDebug() << "SlippyMap::handleData / " << reply->errorString() << (int)reply->error();
         m_Cache->remove( url );
-        // download(tp);
+        //download(tp);
     }
 
     reply->deleteLater();        
@@ -289,7 +290,7 @@ bool SlippyMap::download(QPoint grab)
         d->deleteLater();
 
         processTile(grab, data);
-        m_url = 0;
+        m_url = 0;        
 
         return true;
     }
@@ -300,7 +301,6 @@ bool SlippyMap::download(QPoint grab)
         request.setUrl(m_url);
         request.setAttribute(QNetworkRequest::User, QVariant(grab));
         // request.setAttribute(QNetworkRequest::CacheLoadControlAttribute, QNetworkRequest::PreferCache);
-
         m_ActiveRequests.append ( m_manager.get(request) );
 
         return false;

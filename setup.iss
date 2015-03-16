@@ -5,7 +5,7 @@
 #define MyAppURL "https://github.com/altera2015/ttwatcher"
 #define MyAppExeName "ttwatcher.exe"
 
-#define Executable "dist\ttwatcher.exe"
+#define Executable "build32\src\release\ttwatcher.exe"
 #define ApplicationVersion GetFileVersion(Executable)
 
 
@@ -36,7 +36,7 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
 [Files]
-Source: "dist\ttwatcher.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "build32\src\release\ttwatcher.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "dist\icudt52.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "dist\icuin52.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "dist\icuio52.dll"; DestDir: "{app}"; Flags: ignoreversion
@@ -51,7 +51,11 @@ Source: "dist\Qt5Core.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "dist\Qt5Gui.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "dist\Qt5Network.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "dist\Qt5Widgets.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "dist\Qt5Xml.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "dist\ssleay32.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "dist\platforms\qwindows.dll"; DestDir: "{app}\platforms"; Flags: ignoreversion
+Source: "dist\imageformats\qjpeg.dll"; DestDir: "{app}\imageformats"; Flags: ignoreversion
+
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 
 [Icons]

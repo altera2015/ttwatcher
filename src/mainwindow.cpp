@@ -241,7 +241,7 @@ void MainWindow::onElevationLoaded(bool success, ActivityPtr activity)
     ui->graph->rescaleAxes();
     ui->graph->replot();
 
-    ui->mapWidget->setCenter(centerLat/centerCntr, centerLng/centerCntr);
+    ui->mapWidget->setCenter(10, centerLat/centerCntr, centerLng/centerCntr);
 
 
 
@@ -267,19 +267,44 @@ QString MainWindow::ttdir() const
 
 void MainWindow::dragEnterEvent(QDragEnterEvent *e)
 {
-    if ( e->mimeData()->hasUrls())
+    if ( !e->mimeData()->hasUrls())
     {
-        e->acceptProposedAction();
+        return;
+    }
+
+    foreach (const QUrl &url, e->mimeData()->urls())
+    {
+        if ( !url.isLocalFile() )
+        {
+            continue;
+        }
+        QString filename = url.toLocalFile();
+        if ( filename.endsWith("ttbin", Qt::CaseInsensitive))
+        {
+            e->acceptProposedAction();
+            return;
+        }
     }
 }
 
 void MainWindow::dropEvent(QDropEvent *e)
 {
+    if ( !e->mimeData()->hasUrls())
+    {
+        return;
+    }
+
+
     foreach (const QUrl &url, e->mimeData()->urls())
     {
-        if ( url.isLocalFile() )
+        if ( !url.isLocalFile() )
         {
-            processTTBin(url.toLocalFile());
+            continue;
+        }
+        QString filename = url.toLocalFile();
+        if ( filename.endsWith("ttbin", Qt::CaseInsensitive))
+        {
+            processTTBin(filename);
             return;
         }
     }
@@ -364,8 +389,6 @@ void MainWindow::onWatchesChanged()
 
                 if ( files.count() > 0 )
                 {
-                    qDebug() << "Downloaded: " << files;
-
                     foreach ( QString file, files )
                     {
                         watch->exportFile( file );

@@ -13,6 +13,12 @@ files.**
 
 # Releases
 
+###1.3.0 March 15, 2015 Fixed installer + Usability
+[Download 1.3.0 Installer Here](https://github.com/altera2015/ttwatcher/releases/download/v1.3.0/TTWatcherSetup_x86_1.3.0.0.exe)
+* Fixed installer ( was missing some Qt files)
+* Fixed TCX export to round to 9 digits instead of 6
+* Added drag and drop support
+
 ###1.2.0 March 11, 2015 Fixed Running Cadence
 [Download 1.2.0 Installer Here](https://github.com/altera2015/ttwatcher/releases/download/v1.2.0/TTWatcherSetup_x86_1.2.0.0.exe)
 

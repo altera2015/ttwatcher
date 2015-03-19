@@ -8,6 +8,7 @@
 #include <QFileSystemModel>
 #include <QDesktopServices>
 
+#include "flatfileiconprovider.h"
 #include "ttbinreader.h"
 #include "tcxexport.h"
 #include "version.h"
@@ -19,6 +20,7 @@ bool MainWindow::processTTBin(const QString& filename)
     m_Seconds.clear();
     m_HeartBeat.clear();
     m_Speed.clear();
+    m_Cadence.clear();
 
     ui->mapWidget->clearLines();
 
@@ -80,8 +82,8 @@ void MainWindow::onElevationLoaded(bool success, ActivityPtr activity)
         ui->statusBar->showMessage(tr("Import done."));
     }
 
-    double centerLat=0, centerLng=0;
-    int centerCntr=0;
+    QRectF bounds;
+    bool firstBounds = true;
 
     double lastHeart =0;
 
@@ -104,9 +106,35 @@ void MainWindow::onElevationLoaded(bool success, ActivityPtr activity)
                 continue;
             }
 
-            centerLat += tp->latitude();
-            centerLng += tp->longitude();
-            centerCntr++;
+            if ( firstBounds )
+            {
+                firstBounds = false;
+                bounds.setTop(tp->latitude());
+                bounds.setLeft(tp->longitude());
+                bounds.setBottom(tp->latitude());
+                bounds.setRight(tp->longitude());
+            }
+
+            if ( tp->latitude() < bounds.bottom() )
+            {
+                bounds.setBottom(tp->latitude());
+            }
+            else if ( tp->latitude() > bounds.top() )
+            {
+                bounds.setTop( tp->latitude());
+            }
+
+            if ( tp->longitude() < bounds.left() )
+            {
+                bounds.setLeft(tp->longitude());
+            }
+            else if ( tp->longitude() > bounds.right() )
+            {
+                bounds.setRight( tp->longitude() );
+            }
+
+
+
 
             if (!prev && firstTime == 0 )
             {
@@ -239,9 +267,12 @@ void MainWindow::onElevationLoaded(bool success, ActivityPtr activity)
 
 
     ui->graph->rescaleAxes();
+    ui->graph->graph(1)->valueAxis()->setRangeLower(0.0);
     ui->graph->replot();
 
-    ui->mapWidget->setCenter(10, centerLat/centerCntr, centerLng/centerCntr);
+    QPointF center = bounds.center();
+    int zoom = ui->mapWidget->boundsToZoom( bounds );
+    ui->mapWidget->setCenter(zoom, center.y(), center.x());
 
 
 
@@ -347,6 +378,8 @@ MainWindow::MainWindow(QWidget *parent) :
 
 
     m_FSModel = new QFileSystemModel(this);
+    FlatFileIconProvider * icons = new FlatFileIconProvider();
+    m_FSModel->setIconProvider(icons);
     m_FSModel->setRootPath( ttdir() );
     m_FSModel->setFilter(QDir::AllDirs|QDir::Files|QDir::NoDotAndDotDot);
     QStringList fl;
@@ -376,7 +409,7 @@ void MainWindow::onWatchesChanged()
         if (  watch->preferences().name() == "" )
         {
             watch->loadPreferences();
-            QStringList files = watch->download(ttdir() + QDir::separator() + watch->preferences().name(), true);
+            QStringList files = watch->download(ttdir() + QDir::separator() + watch->preferences().name(), false);
             QString serial = watch->serial();
 
             SingleShot::go([this, files, serial](){

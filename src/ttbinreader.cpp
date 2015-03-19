@@ -146,7 +146,7 @@ bool TTBinReader::readHeader(QIODevice &ttbin, ActivityPtr activity )
         {
             m_RecordLengths[tag] = len;
         }
-        qDebug() << "TagLen " << QString::number(tag,16) << " len " << len;
+        // qDebug() << "TagLen " << QString::number(tag,16) << " len " << len;
 
 
     }
@@ -447,7 +447,7 @@ bool TTBinReader::skipTag(QIODevice &ttbin, quint8 tag, int size)
         qWarning() << "TTBinReader::skipTag / not enough data." << QString::number(tag,16) << size << data.length();
         return false;
     }
-    qWarning() << "TTBinReader::skipTag / skipping tag " << QString::number(tag,16) << pos << size << data.toHex();
+    // qWarning() << "TTBinReader::skipTag / skipping tag " << QString::number(tag,16) << pos << size << data.toHex();
     return true;
 }
 

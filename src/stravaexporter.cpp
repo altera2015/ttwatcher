@@ -192,6 +192,11 @@ void StravaExporter::saveConfig(const WatchPreferences & preferences, QDomDocume
 
 void StravaExporter::exportActivity(ActivityPtr activity)
 {
+    if ( !activity )
+    {
+        return;
+    }
+
     QNetworkRequest r;
     r.setUrl(QUrl("https://www.strava.com/api/v3/uploads"));
     QByteArray bearer("Bearer ");

@@ -638,6 +638,10 @@ void MainWindow::on_actionGo_to_website_triggered()
     QDesktopServices::openUrl( QUrl("https://github.com/altera2015/ttwatcher") );
 }
 
+/*
+ * 1. Try to find the Watch Preferences file that goes with the .ttbin
+ * 2. If not watch use default preferences object.
+ */
 void MainWindow::on_actionExport_Activity_triggered()
 {
     if ( !m_Activity)
@@ -645,17 +649,13 @@ void MainWindow::on_actionExport_Activity_triggered()
         return;
     }
 
-    if ( m_TTManager.watches().count()== 0)
-    {
-        ui->statusBar->showMessage(tr("No TT watch detected."));
-        return;
-    }
-
     QString filename = m_Activity->filename();
 
     QFileInfo fi(filename);
     QDir fileDir = fi.absoluteDir();
-    QStringList parts = fileDir.path().split( QDir::separator() );
+    QString path = QDir::cleanPath(fileDir.path());
+    path = QDir::toNativeSeparators(path);
+    QStringList parts = path.split( QDir::separator() );
 
     WatchPreferencesPtr prefs;
 

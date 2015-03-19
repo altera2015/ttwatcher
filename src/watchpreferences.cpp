@@ -1,5 +1,6 @@
 #include "watchpreferences.h"
 #include "stravaexporter.h"
+#include "tcxactivityexporter.h"
 #include "ttbinreader.h"
 
 #include <QDomDocument>
@@ -12,6 +13,7 @@ WatchPreferences::WatchPreferences(const QString &serial, QObject *parent) :
     m_Serial(serial)
 {
     m_Exporters.append( StravaExporterPtr::create() );
+    m_Exporters.append( TCXActivityExporterPtr::create() );
 
     foreach ( IActivityExporterPtr exptr, m_Exporters)
     {

@@ -361,7 +361,7 @@ bool TTWatch::listFiles(TTFileList &fl)
 
         if ( response.at(20) == 1 )
         {
-            qDebug() << "TTWatch::listFiles / read " << i + 1 << " files.";
+            // qDebug() << "TTWatch::listFiles / read " << i + 1 << " files.";
             return true;
         }
 

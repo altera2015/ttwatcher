@@ -5,7 +5,7 @@ TEMPLATE = app
 
 win32:LIBS+=-lUser32 -lPsapi -lhid -lsetupapi
 win32:RC_FILE = ttwatcher.rc
-# DEFINES+=I_UNDERSTAND_THIS_IS_DANGEROUS
+DEFINES+=I_UNDERSTAND_THIS_IS_DANGEROUS
 DEFINES+=Q_HTTP_STATIC_BUILD
 
 SOURCES += main.cpp\
@@ -26,7 +26,8 @@ SOURCES += main.cpp\
     iactivityexporter.cpp \
     stravaexporter.cpp \
     httpserver.cpp \
-    singleshot.cpp
+    singleshot.cpp \
+    flatfileiconprovider.cpp
 
 win32:SOURCES+=hid.c
 unix:linux:SOURCES+=hidlinux.c
@@ -53,7 +54,8 @@ HEADERS  += mainwindow.h \
     stravaexporter.h \
     httpserver.h \
     strava_auth.h \
-    singleshot.h
+    singleshot.h \
+    flatfileiconprovider.h
 
 FORMS    += mainwindow.ui
 

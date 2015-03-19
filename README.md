@@ -42,11 +42,21 @@ Original inspiration from:
 
 # Attributions
 
-* Running man Icon made by http://www.freepik.com" is licensed under Creative Commons BY 3.0 CC BY 3.0
+* Icons made by 
+	* [Freepik](http://www.flaticon.com/authors/freepik)
+	* [OCHA](http://www.flaticon.com/authors/ocha)
+	* [Icomoon](http://www.flaticon.com/authors/icomoon)
+	* [Elegant Themes](http://www.flaticon.com/authors/elegant-themes)
+	* [Yannick](http://www.flaticon.com/authors/yannick)
+	* [Amit Jakhu](http://www.flaticon.com/authors/amit-jakhu)
+	
+  Icons were modified to add a touch of color, all are licensed under Creative Commons BY 3.0 CC BY 3.0
+  
+  
 * QCustomPlot, an easy to use, modern plotting widget for Qt, Copyright (C) 2011, 2012, 2013, 2014 Emanuel Eichhammer http://www.qcustomplot.com/
 * Built with Qt 5.4 LGPL http://www.qt-project.org
 * qhttpserver from https://github.com/nikhilm/qhttpserver
 
 # Building
 
-Install Qt 5.x Framework and load up the ttwatcher.pro file in the src directory. On Windows you might have to copy the hid.lib to your Release or Debug output directory if you get linking errors.
+Install Qt 5.x Framework and load up the TTWatcherMain.pro file in the src directory. On Windows you might have to copy the hid.lib to your Release or Debug output directory if you get linking errors.

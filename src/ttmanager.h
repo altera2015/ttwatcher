@@ -5,15 +5,18 @@
 #include <QList>
 #include <QMap>
 #include "ttwatch.h"
+#include "watchpreferences.h"
 
 typedef QList<quint16> DeviceIdList;
 typedef QList<TTWatch*> TTWatchList;
+typedef QMap<QString, WatchPreferencesPtr> PreferencesMap;
 
 class TTManager : public QObject
 {
     Q_OBJECT
 
     TTWatchList m_TTWatchList;
+    PreferencesMap m_Preferences;
     void checkvds(quint16 vid, const DeviceIdList & deviceIds );
 
     TTWatch * find( const QString & path );
@@ -26,8 +29,13 @@ public:
     const TTWatchList & watches();
     TTWatch * watch( const QString & serial );
 
+    WatchPreferencesPtr preferences( const QString & serial );
+    WatchPreferencesPtr preferencesForName ( const QString & name );
+    WatchPreferencesPtr defaultPreferences();
 
-
+    void savePreferences( );
+    void loadPreferences( );
+    QString preferenceDir() const;
 
 signals:
 
@@ -38,7 +46,8 @@ public slots:
 
     void checkForTTs();
 
-private slots:
+private:
+    void setupDefaultPreferences();
 
 
 };

@@ -1,5 +1,5 @@
 #include "stravaexporter.h"
-#include "ttwatch.h"
+#include "watchpreferences.h"
 #include "tcxexport.h"
 #include <QNetworkRequest>
 #include <QNetworkReply>
@@ -12,6 +12,8 @@
 #include <QUrlQuery>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QDomNamedNodeMap>
+
 #include "httpserver.h"
 #include "singleshot.h"
 
@@ -23,7 +25,9 @@
 
 StravaExporter::StravaExporter(QObject *parent) :
     IActivityExporter(parent),
-    m_Enabled(false)
+    m_Enabled(false),
+    m_AutoOpen(false),
+    m_Icon( ":/icons/strava.png")
 {
 
     connect(&m_Manager, SIGNAL(finished(QNetworkReply*)), this, SLOT(requestFinished(QNetworkReply*)));
@@ -40,17 +44,15 @@ QString StravaExporter::name() const
     return "Strava";
 }
 
-bool StravaExporter::loadConfig(TTWatch * watch, QDomElement element)
+bool StravaExporter::loadConfig(const WatchPreferences & preferences, QDomElement element)
 {
-    QDomElement token = element.firstChildElement("StravaAuthToken");
-    if ( token.isNull() )
-    {
-        m_Enabled = false;
-        return true;
-    }
+    parseExportTag(element, "Strava", m_Enabled, m_AutoOpen);
 
-    m_AuthToken = watch->decodeToken( token.text() );
-    m_Enabled = m_AuthToken.length() > 0;
+    QDomElement token = element.firstChildElement("StravaAuthToken");
+    if ( !token.isNull() )
+    {
+        m_AuthToken = preferences.decodeToken( token.text() );
+    }
 
     return true;
 }
@@ -60,9 +62,35 @@ bool StravaExporter::isEnabled() const
     return m_Enabled;
 }
 
+void StravaExporter::setEnabled(bool enabled)
+{
+    m_Enabled = enabled;
+}
+
+bool StravaExporter::isOnline() const
+{
+    return true;
+}
+
+bool StravaExporter::autoOpen() const
+{
+    return m_AutoOpen;
+}
+
+void StravaExporter::setAutoOpen(bool autoOpen)
+{
+    m_AutoOpen = autoOpen;
+}
+
+QIcon StravaExporter::icon() const
+{
+    return m_Icon;
+}
+
 void StravaExporter::reset()
 {
     m_Enabled = false;
+    m_AutoOpen = false;
     m_AuthToken = "";
 }
 
@@ -85,11 +113,7 @@ void StravaExporter::setup(QWidget *parent)
         codeQuery.setQuery( req->url().query() );
         QString code = codeQuery.queryItemValue("code");
 
-        qDebug() << "Code " << code;
-
         // now exchange for the auth token.
-
-
         QNetworkRequest r;
         QUrl url("https://www.strava.com/oauth/token");
         QUrlQuery q;
@@ -145,8 +169,11 @@ void StravaExporter::authCodeAnswer(QJsonDocument &d, int httpCode)
 }
 
 
-void StravaExporter::saveConfig(TTWatch *watch, QDomDocument &document, QDomElement &element)
+void StravaExporter::saveConfig(const WatchPreferences & preferences, QDomDocument &document, QDomElement &element)
 {
+
+    writeExportTag(document, element, "Strava", m_Enabled, m_AutoOpen);
+
     QDomElement oldAuthToken = element.firstChildElement("StravaAuthToken");
     if ( !oldAuthToken.isNull() )
     {
@@ -154,10 +181,13 @@ void StravaExporter::saveConfig(TTWatch *watch, QDomDocument &document, QDomElem
     }
 
 
-    QDomElement e = document.createElement("StravaAuthToken");
-    QDomText text = document.createTextNode(watch->encodeToken( m_AuthToken ));
-    element.appendChild(e);
-    e.appendChild(text);
+    if ( m_AuthToken.length() > 0 )
+    {
+        QDomElement e = document.createElement("StravaAuthToken");
+        QDomText text = document.createTextNode(preferences.encodeToken( m_AuthToken ));
+        element.appendChild(e);
+        e.appendChild(text);
+    }
 }
 
 void StravaExporter::exportActivity(ActivityPtr activity)
@@ -327,7 +357,7 @@ void StravaExporter::requestFinished(QNetworkReply *reply)
 
     if ( pe.error != QJsonParseError::NoError )
     {
-        qCritical() << "StravaExporter::requestFinished / JSON Parse Error. " << pe.errorString();
+        qCritical() << "StravaExporter::requestFinished / JSON Parse Error. " << pe.errorString() << requestType << data;
         reply->deleteLater();
         return;
     }

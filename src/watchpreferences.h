@@ -2,6 +2,7 @@
 #define WATCHPREFERENCES_H
 
 #include <QObject>
+#include <QSharedPointer>
 #include "iactivityexporter.h"
 
 class TTWatch;
@@ -10,16 +11,23 @@ class WatchPreferences : public QObject
 {
     Q_OBJECT
 public:
-    explicit WatchPreferences(QObject *parent = 0);
+    explicit WatchPreferences(const QString & serial, QObject *parent = 0);
 
     QString name() const;
     void setName( const QString & name );
+    QString serial() const;
 
-    bool parsePreferences(TTWatch *watch, const QByteArray & data );
-    QByteArray updatePreferences( TTWatch * watch, const QByteArray &data );
+    bool parsePreferences(const QByteArray & data );
+    QByteArray updatePreferences(const QByteArray &data );
 
     IActivityExporterList exporters();
     IActivityExporterPtr exporter( const QString & service );
+
+    QString encodeToken(const QByteArray &token) const;
+    QByteArray decodeToken(const QString &token) const;
+
+    bool exportActivity(ActivityPtr activity);
+    bool exportFile(const QString &filename);
 
 signals:
     void exportFinished( bool success, QString message, QUrl url );
@@ -31,8 +39,11 @@ private slots:
 private:
 
     QString m_Name;
+    QString m_Serial;
     IActivityExporterList m_Exporters;
 
+    QByteArray scrambleToken(const QByteArray &sourceToken) const;
 };
+typedef QSharedPointer<WatchPreferences>WatchPreferencesPtr;
 
 #endif // WATCHPREFERENCES_H

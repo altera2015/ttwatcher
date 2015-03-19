@@ -276,8 +276,6 @@ TTWatch::TTWatch(const QString &path, const QString &serial, QObject *parent) :
     m_Device(0),
     m_Counter(1)
 {
-    connect(&m_Preferences, SIGNAL(setupFinished(bool)), this, SLOT(setupFinished(bool)));
-    connect(&m_Preferences, SIGNAL(exportFinished(bool,QString,QUrl)), this, SLOT(exportFinished(bool,QString,QUrl)));
 }
 
 TTWatch::~TTWatch()
@@ -293,11 +291,6 @@ QString TTWatch::path() const
 QString TTWatch::serial() const
 {
     return m_Serial;
-}
-
-WatchPreferences &TTWatch::preferences()
-{
-    return m_Preferences;
 }
 
 bool TTWatch::open()
@@ -384,8 +377,6 @@ bool TTWatch::listFiles(TTFileList &fl)
                 ( (quint8)response[7] << 8) |
                 ( (quint8)response[8] );
 
-
-        qDebug() << f.length << QString::number(f.id, 16) << response.toHex();
         fl.append(f);
     }
 
@@ -480,48 +471,26 @@ int TTWatch::batteryLevel()
     return (quint8)response.at(1);
 }
 
-
-bool TTWatch::loadPreferences()
+bool TTWatch::downloadPreferences(QIODevice &dest)
 {
     WatchOpener wo(this);
     if ( !wo.open() )
     {
-        qWarning() << "TTWatch::loadPreferences / failed to open.";
+        qWarning() << "TTWatch::downloadPreferences / failed to open.";
         return false;
     }
 
     QByteArray data;
     if ( readFile(data, FILE_PREFERENCES_XML, true ) )
     {
-        return m_Preferences.parsePreferences(this, data);
+
+        dest.write(data);
+        return true;
     }
 
     return false;
-
 }
 
-bool TTWatch::exportFile(const QString &filename)
-{
-    QFile f(filename);
-    if ( f.open(QIODevice::ReadOnly))
-    {
-        return false;
-    }
-    TTBinReader br;
-    ActivityPtr a = br.read(f, true);
-    if ( !a )
-    {
-        return false;
-    }
-
-    foreach ( IActivityExporterPtr ae, m_Preferences.exporters() )
-    {
-        if ( ae->isEnabled() )
-        {
-            ae->exportActivity(a);
-        }
-    }
-}
 
 QStringList TTWatch::download(const QString &basePath, bool deleteWhenDone)
 {
@@ -545,7 +514,7 @@ QStringList TTWatch::download(const QString &basePath, bool deleteWhenDone)
     {
         if (! (( ( file.id & FILE_TYPE_MASK) == FILE_TTBIN_DATA ) && file.length > 100 ) )
         {
-            qDebug() << QString("Not Downloading %1, len = %2").arg(QString::number(file.id,16)).arg(file.length);
+            // qDebug() << QString("Not Downloading %1, len = %2").arg(QString::number(file.id,16)).arg(file.length);
             continue;
         }
 
@@ -616,65 +585,8 @@ QStringList TTWatch::download(const QString &basePath, bool deleteWhenDone)
     return files;
 }
 
-QString TTWatch::encodeToken(const QByteArray &token)
-{
-    QByteArray dest = scrambleToken( token );
 
-    QString result;
-    foreach ( char c, dest )
-    {
-        result.append(QChar(c));
-    }
-
-    return result;
-}
-
-
-QByteArray TTWatch::decodeToken(const QString &token)
-{
-    QByteArray source;
-
-    foreach ( QChar c, token )
-    {
-        source.append( c.toLatin1() );
-    }
-
-    return scrambleToken(source);
-}
-
-QByteArray TTWatch::scrambleToken(const QByteArray &sourceToken)
-{
-    QByteArray key;
-    key.append( m_Serial.toLatin1() );
-    while ( key.length() < sourceToken.length() )
-    {
-        key.append( char( 0x56 ) );
-        key.append( char( 0x33 ) );
-        key.append( char( 0x49 ) );
-        key.append( char( 0x37 ) );
-        key.append( char( 0x4b ) );
-        key.append( char( 0x30 ) );
-        key.append( char( 0x49 ) );
-        key.append( char( 0x39 ) );
-        key.append( char( 0x4e ) );
-        key.append( char( 0x34 ) );
-        key.append( char( 0x47 ) );
-        key.append( char( 0x30 ) );
-    }
-
-    QByteArray scrambledToken;
-
-    for ( int i=0;i<sourceToken.length();i++)
-    {
-        quint8 sc, kc;
-        sc = (quint8)sourceToken.at(i);
-        kc = (quint8)key.at(i);
-        scrambledToken.append((char) ( sc ^ kc ));
-    }
-
-    return scrambledToken;
-}
-
+/*
 void TTWatch::exportFinished(bool success, QString message, QUrl url)
 {
     if ( success )
@@ -704,7 +616,7 @@ void TTWatch::setupFinished(bool success)
         return;
     }
 
-    QByteArray updatedXml = m_Preferences.updatePreferences(this, sourceXml);
+    QByteArray updatedXml = m_Preferences.updatePreferences(sourceXml);
 
     if ( !writeFile(updatedXml, FILE_PREFERENCES_XML, true))
     {
@@ -712,3 +624,4 @@ void TTWatch::setupFinished(bool success)
         return;
     }
 }
+*/

@@ -168,8 +168,8 @@ void MainWindow::onElevationLoaded(bool success, ActivityPtr activity)
             {
                 m_HeartBeat.append( heartBeat.add(lastHeart) );
             }
-            m_Speed.append( speed.add(tp->speed() * 3.6) );
 
+            m_Speed.append( speed.add(tp->speed() * 3.6) );
 
             if ( m_Activity->sport() == Activity::RUNNING )
             {
@@ -179,22 +179,7 @@ void MainWindow::onElevationLoaded(bool success, ActivityPtr activity)
                 }
 
                 m_Cadence.append( 60.0 * cadence.value() );
-                /*
-                if ( cadence.count() > 0 )
-                {
-                    if ( cadence.count() > 10 )
-                    {
 
-                    }
-                    else
-                    {
-                        m_Cadence.append( 0 );
-                    }
-                }
-                else
-                {
-                    m_Cadence.append(0);
-                }*/
             }
             if ( m_Activity->sport() == Activity::BIKING )
             {
@@ -398,44 +383,113 @@ MainWindow::~MainWindow()
     delete ui;
 }
 
-
+/*
+ * When a Watch is connected
+ *
+ * 1. Load the preferences file.
+ * 2. Load the .ttbin's
+ * 3. Export .ttbin's as specified in preferences file
+ * 4. Upload GPS Quick Data.
+ * 5. Store preferences files on drive. This file may only be modified if Watch is present.
+ *
+ */
 void MainWindow::onWatchesChanged()
 {
     ui->actionDownload_Workouts->setEnabled( m_TTManager.watches().count() > 0 );
+
     foreach ( TTWatch * watch, m_TTManager.watches())
     {
-        if (  watch->preferences().name() == "" )
+        QByteArray prefData;
+        QBuffer buffer(&prefData);
+        buffer.open(QIODevice::WriteOnly);
+
+        /**********************************************/
+        /* 1. LOADING PREFERENCES */
+        /**********************************************/
+
+        emit workInfo(tr("Loading Preferences"), false);
+
+        if ( !watch->downloadPreferences(buffer) )
         {
-            watch->loadPreferences();
-            QStringList files = watch->download(ttdir() + QDir::separator() + watch->preferences().name(), false);
-            QString serial = watch->serial();
-
-            SingleShot::go([this, files, serial](){
-
-                TTWatch * watch = m_TTManager.watch(serial);
-                if ( !watch )
-                {
-                    return;
-                }
-
-                if ( files.count() > 0 )
-                {
-                    foreach ( QString file, files )
-                    {
-                        watch->exportFile( file );
-                    }
-
-                    QModelIndex index = m_FSModel->index( files.first() );
-                    if ( index.isValid() )
-                    {
-                        ui->treeView->setCurrentIndex(index);
-                        ui->treeView->scrollTo(index);
-                    }
-                }
-
-            }, 1000, true, this);
+            qCritical() << "MainWindow::onWatchesChanged / unable to load preferences file.";
+            emit workInfo(tr("Failed to load preferences"), true);
+            continue;
         }
+
+        buffer.close();
+
+        /*QFile tempf("tempf.xml");
+        tempf.open(QIODevice::WriteOnly);
+        tempf.write(prefData);
+        tempf.close();*/
+
+        WatchPreferencesPtr preferences = m_TTManager.preferences( watch->serial() );
+        if ( !preferences )
+        {
+            qCritical() << "MainWindow::onWatchesChanged / did not get a preferences ptr.";
+            continue;
+        }
+
+        if ( !preferences->parsePreferences( prefData ) )
+        {
+            qCritical() << "MainWindow::onWatchesChanged / failed to parse preferences.";
+            emit workInfo(tr("Failed to parse preferences"), true);
+            continue;
+        }
+
+        /**********************************************/
+        /* 2. LOAD TTBINS */
+        /**********************************************/
+
+        emit workInfo(tr("Downloading .ttbins"), false);
+
+        QStringList files = watch->download(ttdir() + QDir::separator() + preferences->name(), true);
+
+        emit workInfo(tr("Exporting .ttbins"), false);
+
+        /**********************************************/
+        /* 3. EXPORT TTBINS */
+        /**********************************************/
+
+        foreach ( const QString & filename, files )
+        {
+            if ( !preferences->exportFile(filename) )
+            {
+                emit workInfo(tr("Exporting .ttbin failed. %1").arg(filename), false);
+            }
+        }
+
+        // place the UI interaction on a slight delay to give the m_FSModel a chance
+        // to pick up the new files.
+        SingleShot::go([this, files](){
+
+            if ( files.count() > 0 )
+            {
+                QModelIndex index = m_FSModel->index( files.first() );
+                if ( index.isValid() )
+                {
+                    ui->treeView->setCurrentIndex(index);
+                    ui->treeView->scrollTo(index);
+                }
+            }
+
+        }, 1000, true, this);
+
+        /**********************************************/
+        /* 4. APPLY GPS QUICK DATA */
+        /**********************************************/
+
+        // soon.
+        emit workInfo(tr("Uploading GPS Quick data"), false);
+
     }
+
+    emit workInfo(tr("Done"), true);
+
+    /**********************************************/
+    /* 5. Save preferences data. */
+    /**********************************************/
+    m_TTManager.savePreferences();
 }
 
 void MainWindow::onGraphMouseMove(QMouseEvent *event)
@@ -522,26 +576,6 @@ void MainWindow::on_treeView_clicked(const QModelIndex &index)
 
 
 
-void MainWindow::on_actionDownload_Workouts_triggered()
-{
-    if ( m_TTManager.watches().count()== 0)
-    {
-        ui->statusBar->showMessage(tr("No TT watch detected."));
-        return;
-    }
-
-    TTWatch * watch = m_TTManager.watches().first();
-    if ( !watch->open() )
-    {
-        ui->statusBar->showMessage(tr("Could not open watch"));
-        return;
-    }
-
-    // watch->download(ttdir() + QDir::separator() + "ttwatcher", false);
-    watch->loadPreferences();
-    watch->close();
-}
-
 void MainWindow::on_actionShow_in_explorer_triggered()
 {
     QModelIndex index = ui->treeView->currentIndex();
@@ -617,19 +651,34 @@ void MainWindow::on_actionExport_Activity_triggered()
         return;
     }
 
-    TTWatch * watch = m_TTManager.watches().first();
+    QString filename = m_Activity->filename();
 
-    if ( watch->preferences().name() == "" )
+    QFileInfo fi(filename);
+    QDir fileDir = fi.absoluteDir();
+    QStringList parts = fileDir.path().split( QDir::separator() );
+
+    WatchPreferencesPtr prefs;
+
+    for (int i=parts.count()-1;i>=0;i--)
     {
-        watch->loadPreferences();
+        prefs = m_TTManager.preferencesForName( parts[i] );
+        if ( prefs )
+        {
+            break;
+        }
     }
 
-    IActivityExporterPtr exp = watch->preferences().exporter("Strava");
-    if (exp)
+    if ( !prefs )
     {
-        exp->exportActivity(m_Activity);
-        // exp->setup(this);
+        prefs = m_TTManager.defaultPreferences();
     }
 
-    watch->close();
+    if ( prefs )
+    {
+        prefs->exportActivity(m_Activity);
+    }
+    else
+    {
+        ui->statusBar->showMessage(tr("Could not find an exporter object."));
+    }
 }

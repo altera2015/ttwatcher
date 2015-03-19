@@ -34,6 +34,9 @@ public:
     explicit MainWindow(QWidget *parent = 0);
     ~MainWindow();
 
+signals:
+    void workInfo( QString message, bool done );
+
 private slots:
     void onElevationLoaded(bool success, ActivityPtr activity);
 
@@ -43,9 +46,7 @@ private slots:
 
     void on_actionProcess_TTBIN_triggered();
 
-    void on_actionExit_triggered();
-
-    void on_actionDownload_Workouts_triggered();
+    void on_actionExit_triggered();    
 
     void on_actionShow_in_explorer_triggered();
 

@@ -6,8 +6,6 @@
 #include <QUrl>
 #include <QStringList>
 
-#include "watchpreferences.h"
-
 #include "hidapi.h"
 
 typedef struct ttfile {
@@ -23,7 +21,6 @@ class TTWatch : public QObject
     QString m_Serial;
     hid_device * m_Device;
     quint8 m_Counter;
-    WatchPreferences m_Preferences;
 
     quint32 readquint32( const QByteArray &data, int offset ) const;
     bool sendCommand( const QByteArray & command, QByteArray & response );
@@ -76,7 +73,6 @@ public:
 
     QString path() const;
     QString serial() const;
-    WatchPreferences & preferences();
 
     bool open();
     bool isOpen() const;
@@ -86,19 +82,13 @@ public:
     bool readFile(QByteArray & data , quint32 fileId, bool processEvents = false);
     bool writeFile(const QByteArray & source, quint32 fileId, bool processEvents = false);
     int batteryLevel();    
-    bool loadPreferences();
-    bool exportFile( const QString & filename );
+    bool downloadPreferences( QIODevice & dest );
 
     // convenience functions
     QStringList download( const QString & basePath, bool deleteWhenDone );
 
-    QString encodeToken( const QByteArray & token );
-    QByteArray decodeToken( const QString & token );
-    QByteArray scrambleToken( const QByteArray & token );
-
 private slots:
-    void exportFinished( bool success, QString message, QUrl url );
-    void setupFinished( bool success );
+
 
 };
 

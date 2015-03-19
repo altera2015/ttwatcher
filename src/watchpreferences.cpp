@@ -1,11 +1,15 @@
 #include "watchpreferences.h"
 #include "stravaexporter.h"
+#include "ttbinreader.h"
+
 #include <QDomDocument>
 #include <QDomElement>
 #include <QDebug>
+#include <QFile>
 
-WatchPreferences::WatchPreferences(QObject *parent) :
-    QObject(parent)
+WatchPreferences::WatchPreferences(const QString &serial, QObject *parent) :
+    QObject(parent),
+    m_Serial(serial)
 {
     m_Exporters.append( StravaExporterPtr::create() );
 
@@ -26,7 +30,12 @@ void WatchPreferences::setName(const QString &name)
     m_Name = name;
 }
 
-bool WatchPreferences::parsePreferences(TTWatch * watch, const QByteArray &data)
+QString WatchPreferences::serial() const
+{
+    return m_Serial;
+}
+
+bool WatchPreferences::parsePreferences(const QByteArray &data)
 {
     foreach ( IActivityExporterPtr exp, m_Exporters)
     {
@@ -43,6 +52,7 @@ bool WatchPreferences::parsePreferences(TTWatch * watch, const QByteArray &data)
     }
 
     QDomElement preferences = dd.firstChildElement("preferences");
+
     if ( preferences.isNull() )
     {
         qWarning() << "WatchPreferences::parsePreferences / no preferences element.";
@@ -64,23 +74,20 @@ bool WatchPreferences::parsePreferences(TTWatch * watch, const QByteArray &data)
     }
 
     QDomElement onlineExporters = exporters.firstChildElement("online");
-    if ( !onlineExporters.isNull() )
+    QDomElement offlineExporters = exporters.firstChildElement("offline");
+
+    foreach ( IActivityExporterPtr exp, m_Exporters)
     {
-
-        foreach ( IActivityExporterPtr exp, m_Exporters)
+        if (!exp->loadConfig( *this, exp->isOnline() ? onlineExporters : offlineExporters ))
         {
-            if (!exp->loadConfig(watch, onlineExporters))
-            {
-                return false;
-            }
+            return false;
         }
-
     }
 
     return true;
 }
 
-QByteArray WatchPreferences::updatePreferences(TTWatch *watch, const QByteArray &data)
+QByteArray WatchPreferences::updatePreferences( const QByteArray &data)
 {
     QDomDocument dd;
 
@@ -113,11 +120,19 @@ QByteArray WatchPreferences::updatePreferences(TTWatch *watch, const QByteArray 
         onlineExporters.setTagName("online");
         exporters.appendChild(onlineExporters);
     }
+    QDomElement offlineExporters = exporters.firstChildElement("offline");
+    if ( offlineExporters.isNull() )
+    {
+        offlineExporters = dd.documentElement();
+        offlineExporters.setTagName("offline");
+        exporters.appendChild(offlineExporters);
+    }
+
 
 
     foreach ( IActivityExporterPtr exp, m_Exporters)
     {
-        exp->saveConfig(watch, dd, onlineExporters);
+        exp->saveConfig(*this, dd, exp->isOnline() ? onlineExporters : offlineExporters );
     }
 
 
@@ -140,4 +155,95 @@ IActivityExporterPtr WatchPreferences::exporter(const QString &service)
     }
 
     return IActivityExporterPtr();
+}
+
+QString WatchPreferences::encodeToken(const QByteArray &token) const
+{
+    QByteArray dest = scrambleToken( token );
+
+    QString result;
+    foreach ( char c, dest )
+    {
+        result.append(QChar(c));
+    }
+
+    return result;
+}
+
+
+QByteArray WatchPreferences::decodeToken(const QString &token) const
+{
+    QByteArray source;
+
+    foreach ( QChar c, token )
+    {
+        source.append( c.toLatin1() );
+    }
+
+    return scrambleToken(source);
+}
+
+
+
+QByteArray WatchPreferences::scrambleToken(const QByteArray &sourceToken) const
+{
+    QByteArray key;
+    key.append( m_Serial.toLatin1() );
+    while ( key.length() < sourceToken.length() )
+    {
+        key.append( char( 0x56 ) );
+        key.append( char( 0x33 ) );
+        key.append( char( 0x49 ) );
+        key.append( char( 0x37 ) );
+        key.append( char( 0x4b ) );
+        key.append( char( 0x30 ) );
+        key.append( char( 0x49 ) );
+        key.append( char( 0x39 ) );
+        key.append( char( 0x4e ) );
+        key.append( char( 0x34 ) );
+        key.append( char( 0x47 ) );
+        key.append( char( 0x30 ) );
+    }
+
+    QByteArray scrambledToken;
+
+    for ( int i=0;i<sourceToken.length();i++)
+    {
+        quint8 sc, kc;
+        sc = (quint8)sourceToken.at(i);
+        kc = (quint8)key.at(i);
+        scrambledToken.append((char) ( sc ^ kc ));
+    }
+
+    return scrambledToken;
+}
+
+bool WatchPreferences::exportActivity(ActivityPtr activity)
+{
+    foreach ( IActivityExporterPtr ae, m_Exporters )
+    {
+        if ( ae->isEnabled() )
+        {
+            ae->exportActivity(activity);
+        }
+    }
+
+    return true;
+}
+
+bool WatchPreferences::exportFile(const QString &filename)
+{
+    QFile f(filename);
+    if ( f.open(QIODevice::ReadOnly))
+    {
+        return false;
+    }
+    TTBinReader br;
+    ActivityPtr a = br.read(f, true);
+    if ( !a )
+    {
+        return false;
+    }
+
+    return exportActivity(a);
 }

@@ -37,7 +37,7 @@ public:
 
 signals:
     void exportFinished( bool success, QString message, QUrl url );
-    void setupFinished( bool success );
+    void setupFinished( IActivityExporter * exporter, bool success );
 
 public slots:
     virtual void exportActivity( ActivityPtr activity ) = 0;

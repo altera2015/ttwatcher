@@ -29,6 +29,7 @@ public:
     const TTWatchList & watches();
     TTWatch * watch( const QString & serial );
 
+    PreferencesMap &preferences();
     WatchPreferencesPtr preferences( const QString & serial );
     WatchPreferencesPtr preferencesForName ( const QString & name );
     WatchPreferencesPtr defaultPreferences();

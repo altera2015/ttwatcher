@@ -152,7 +152,7 @@ void StravaExporter::authCodeAnswer(QJsonDocument &d, int httpCode)
 {
     if ( httpCode != 200 )
     {
-        emit setupFinished(false);
+        emit setupFinished(this, false);
         return;
     }
 
@@ -160,11 +160,11 @@ void StravaExporter::authCodeAnswer(QJsonDocument &d, int httpCode)
     if ( response.contains("access_token"))
     {
         m_AuthToken = response["access_token"].toString().toUtf8();
-        emit setupFinished(true);
+        emit setupFinished(this, true);
     }
     else
     {
-        emit setupFinished(false);
+        emit setupFinished(this, false);
     }
 }
 

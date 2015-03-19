@@ -29,7 +29,8 @@ SOURCES += main.cpp\
     singleshot.cpp \
     flatfileiconprovider.cpp \
     datasmoothing.cpp \
-    tcxactivityexporter.cpp
+    tcxactivityexporter.cpp \
+    settingsdialog.cpp
 
 win32:SOURCES+=hid.c
 unix:linux:SOURCES+=hidlinux.c
@@ -59,9 +60,11 @@ HEADERS  += mainwindow.h \
     singleshot.h \
     flatfileiconprovider.h \
     datasmoothing.h \
-    tcxactivityexporter.h
+    tcxactivityexporter.h \
+    settingsdialog.h
 
-FORMS    += mainwindow.ui
+FORMS    += mainwindow.ui \
+    settingsdialog.ui
 
 RESOURCES += \
     resources.qrc

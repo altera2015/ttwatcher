@@ -13,6 +13,8 @@
         <file>watch_small.png</file>
         <file>folder250.png</file>
         <file>strava.png</file>
+        <file>tcx.png</file>
+        <file>settings20.png</file>
     </qresource>
     <qresource prefix="/html">
         <file>404.html</file>

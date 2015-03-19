@@ -117,6 +117,11 @@ TTWatch *TTManager::watch(const QString &serial)
     return 0;
 }
 
+PreferencesMap & TTManager::preferences()
+{
+    return m_Preferences;
+}
+
 WatchPreferencesPtr TTManager::preferences(const QString &serial)
 {
     if ( m_Preferences.contains(serial))
@@ -211,19 +216,12 @@ void TTManager::loadPreferences()
     m_Preferences.clear();
 
     QString path = preferenceDir();
-    qDebug() << path;
-    QDirIterator i(path, QStringList(), QDir::Files);
+    QStringList sl;
+    sl.append("watchPrefs_*.xml");
+    QDirIterator i(path, sl, QDir::Files);
     while ( i.hasNext() )
     {
         QString filename = i.next();
-        qDebug() << filename;
-
-        if ( !filename.startsWith("watchPrefs_"))
-        {
-            continue;
-        }
-
-
         QFile f( filename );
         if ( !f.open(QIODevice::ReadOnly))
         {
@@ -268,7 +266,7 @@ void TTManager::loadPreferences()
         }
     }
 
-    if ( m_Preferences.count() == 0 )
+    if ( !defaultPreferences() )
     {
         setupDefaultPreferences();
     }

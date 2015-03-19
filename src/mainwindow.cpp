@@ -14,6 +14,7 @@
 #include "version.h"
 #include "singleshot.h"
 #include "datasmoothing.h"
+#include "settingsdialog.h"
 
 bool MainWindow::processTTBin(const QString& filename)
 {
@@ -681,4 +682,16 @@ void MainWindow::on_actionExport_Activity_triggered()
     {
         ui->statusBar->showMessage(tr("Could not find an exporter object."));
     }
+}
+
+void MainWindow::on_actionSettings_triggered()
+{
+    SettingsDialog * s = findChild<SettingsDialog*>();
+    if ( !s )
+    {
+        s = new SettingsDialog (&m_TTManager, this);
+    }
+
+    s->show();
+
 }

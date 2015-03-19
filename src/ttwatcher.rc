@@ -1,4 +1,4 @@
-IDI_ICON1               ICON    DISCARDABLE     "running32.ico"
+IDI_ICON1               ICON    DISCARDABLE     "runningman.ico"
 
 #include <windows.h>
 #include "version.h"

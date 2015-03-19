@@ -26,6 +26,7 @@ public:
 
     void pan(const QPoint &delta);
     bool geoToScreen( qreal latitude, qreal longitude, QPoint & p ) const;
+    int boundsToZoom ( const QRectF & bounds );
     QRectF geoBounds();
 
     void cancelDownloads();

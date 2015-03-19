@@ -339,6 +339,38 @@ bool SlippyMap::geoToScreen( qreal latitude, qreal longitude, QPoint & p ) const
     return p.x() >= 0 && p.x() <= width && p.y() >= 0 && p.y() <= height;
 }
 
+// bounds calculation from:
+// http://stackoverflow.com/questions/6048975/google-maps-v3-how-to-calculate-the-zoom-level-for-a-given-bounds
+static double latRad( double lat )
+{
+    double s = sin( lat * M_PI / 180.0 );
+    double radX2 = log(( 1 + s ) / ( 1 - s ) ) / 2;
+    return qMax( qMin( radX2, M_PI ), -M_PI) / 2;
+}
+
+static int calc_zoom( double mapPx, double worldPx, double fraction )
+{
+    return floor( log(mapPx / worldPx / fraction) / 0.6931471805599453); // 0.6931471805599453 = nat log 2.
+}
+
+
+int SlippyMap::boundsToZoom(const QRectF &bounds)
+{
+    QPoint worldDim (256,256);
+    int zoomMax = 18;
+
+    QPointF ne = bounds.topRight();
+    QPointF sw = bounds.bottomLeft();
+
+    double latFraction = ( latRad(ne.y()) - latRad( sw.y())) / M_PI;
+    double lngDiff = ne.x() - sw.x();
+    double lngFraction = ((lngDiff < 0 ) ? ( lngDiff + 360 ) : lngDiff ) / 360;
+    int latZoom = calc_zoom( height, worldDim.y(), latFraction);
+    int lngZoom = calc_zoom( width, worldDim.x(), lngFraction);
+
+    return qMin( qMin( latZoom, lngZoom), zoomMax);
+}
+
 
 QRectF SlippyMap::geoBounds()
 {

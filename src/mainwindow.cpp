@@ -13,6 +13,7 @@
 #include "tcxexport.h"
 #include "version.h"
 #include "singleshot.h"
+#include "datasmoothing.h"
 
 bool MainWindow::processTTBin(const QString& filename)
 {
@@ -93,7 +94,11 @@ void MainWindow::onElevationLoaded(bool success, ActivityPtr activity)
     quint64 firstTime = 0;
 
 
-    QVector<int> cadence;
+    // QVector<int> cadence;
+    DataSmoothing<int> cadence;
+    DataSmoothing<int> speed;
+    DataSmoothing<int> heartBeat;
+    DataSmoothing<int> altitude;
 
     TrackPointPtr prev;
     foreach( LapPtr lap, m_Activity->laps())
@@ -151,38 +156,35 @@ void MainWindow::onElevationLoaded(bool success, ActivityPtr activity)
 
             if ( success )
             {
-                m_Elevation.append( tp->altitude() );
+                m_Elevation.append( altitude.add(tp->altitude()) );
             }
 
             if ( tp->heartRate() > 0 )
             {
-                m_HeartBeat.append( tp->heartRate() );
+                m_HeartBeat.append( heartBeat.add(tp->heartRate()) );
                 lastHeart = tp->heartRate();
             }
             else
             {
-                m_HeartBeat.append( lastHeart );
+                m_HeartBeat.append( heartBeat.add(lastHeart) );
             }
-            m_Speed.append( tp->speed() * 3.6 );
+            m_Speed.append( speed.add(tp->speed() * 3.6) );
 
 
             if ( m_Activity->sport() == Activity::RUNNING )
             {
                 if ( tp->cadence() > 0 )
                 {
-                    cadence.push_front( tp->cadence() );
+                    cadence.add( tp->cadence() );
                 }
 
+                m_Cadence.append( 60.0 * cadence.value() );
+                /*
                 if ( cadence.count() > 0 )
                 {
-                    double dc = 0;
-                    foreach ( int c, cadence )
-                    {
-                        dc+=c;
-                    }
                     if ( cadence.count() > 10 )
                     {
-                        m_Cadence.append( 60.0 * dc / cadence.count() );
+
                     }
                     else
                     {
@@ -192,15 +194,11 @@ void MainWindow::onElevationLoaded(bool success, ActivityPtr activity)
                 else
                 {
                     m_Cadence.append(0);
-                }
-                while ( cadence.count() > 30 )
-                {
-                    cadence.pop_back();
-                }
+                }*/
             }
             if ( m_Activity->sport() == Activity::BIKING )
             {
-                m_Cadence.append( tp->cadence() );
+                m_Cadence.append( cadence.add(tp->cadence()) );
             }
 
         }

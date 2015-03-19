@@ -27,7 +27,8 @@ SOURCES += main.cpp\
     stravaexporter.cpp \
     httpserver.cpp \
     singleshot.cpp \
-    flatfileiconprovider.cpp
+    flatfileiconprovider.cpp \
+    datasmoothing.cpp
 
 win32:SOURCES+=hid.c
 unix:linux:SOURCES+=hidlinux.c
@@ -55,7 +56,8 @@ HEADERS  += mainwindow.h \
     httpserver.h \
     strava_auth.h \
     singleshot.h \
-    flatfileiconprovider.h
+    flatfileiconprovider.h \
+    datasmoothing.h
 
 FORMS    += mainwindow.ui
 

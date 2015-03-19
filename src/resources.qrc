@@ -1,7 +1,17 @@
 <RCC>
     <qresource prefix="/icons">
-        <file>running24.png</file>
-        <file>running32.png</file>
+        <file>heart254.png</file>
+        <file>man360.png</file>
+        <file>mountain13.png</file>
+        <file>trail.png</file>
+        <file>door9.png</file>
+        <file>home10.png</file>
+        <file>info28.png</file>
+        <file>arrow68.png</file>
+        <file>document4.png</file>
+        <file>hard13.png</file>
+        <file>watch_small.png</file>
+        <file>folder250.png</file>
     </qresource>
     <qresource prefix="/html">
         <file>404.html</file>

@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>745</width>
+    <width>619</width>
     <height>425</height>
    </rect>
   </property>
@@ -15,7 +15,7 @@
   </property>
   <property name="windowIcon">
    <iconset resource="resources.qrc">
-    <normaloff>:/icons/running32.png</normaloff>:/icons/running32.png</iconset>
+    <normaloff>:/icons/man360.png</normaloff>:/icons/man360.png</iconset>
   </property>
   <widget class="QWidget" name="centralWidget">
    <layout class="QHBoxLayout" name="horizontalLayout">
@@ -116,7 +116,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>745</width>
+     <width>619</width>
      <height>21</height>
     </rect>
    </property>
@@ -150,6 +150,12 @@
    <addaction name="menuHelp"/>
   </widget>
   <widget class="QToolBar" name="mainToolBar">
+   <property name="iconSize">
+    <size>
+     <width>32</width>
+     <height>32</height>
+    </size>
+   </property>
    <attribute name="toolBarArea">
     <enum>TopToolBarArea</enum>
    </attribute>
@@ -161,7 +167,35 @@
    <addaction name="actionExport_Activity"/>
   </widget>
   <widget class="QStatusBar" name="statusBar"/>
+  <widget class="QToolBar" name="toolBar">
+   <property name="windowTitle">
+    <string>toolBar</string>
+   </property>
+   <property name="layoutDirection">
+    <enum>Qt::LeftToRight</enum>
+   </property>
+   <property name="iconSize">
+    <size>
+     <width>32</width>
+     <height>32</height>
+    </size>
+   </property>
+   <attribute name="toolBarArea">
+    <enum>TopToolBarArea</enum>
+   </attribute>
+   <attribute name="toolBarBreak">
+    <bool>false</bool>
+   </attribute>
+   <addaction name="actionShow_Speed"/>
+   <addaction name="actionShow_Heart_Rate"/>
+   <addaction name="actionShow_Elevation"/>
+   <addaction name="actionShow_Cadence"/>
+  </widget>
   <action name="actionProcess_TTBIN">
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/icons/document4.png</normaloff>:/icons/document4.png</iconset>
+   </property>
    <property name="text">
     <string>Process .ttbin...</string>
    </property>
@@ -170,11 +204,19 @@
    </property>
   </action>
   <action name="actionExit">
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/icons/door9.png</normaloff>:/icons/door9.png</iconset>
+   </property>
    <property name="text">
     <string>Exit</string>
    </property>
   </action>
   <action name="actionAbout">
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/icons/info28.png</normaloff>:/icons/info28.png</iconset>
+   </property>
    <property name="text">
     <string>About</string>
    </property>
@@ -185,6 +227,10 @@
    </property>
   </action>
   <action name="actionShow_in_explorer">
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/icons/hard13.png</normaloff>:/icons/hard13.png</iconset>
+   </property>
    <property name="text">
     <string>Show in explorer...</string>
    </property>
@@ -196,6 +242,10 @@
    <property name="checkable">
     <bool>true</bool>
    </property>
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/icons/man360.png</normaloff>:/icons/man360.png</iconset>
+   </property>
    <property name="text">
     <string>Show Speed</string>
    </property>
@@ -203,6 +253,10 @@
   <action name="actionShow_Heart_Rate">
    <property name="checkable">
     <bool>true</bool>
+   </property>
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/icons/heart254.png</normaloff>:/icons/heart254.png</iconset>
    </property>
    <property name="text">
     <string>Show Heart Rate</string>
@@ -212,6 +266,10 @@
    <property name="checkable">
     <bool>true</bool>
    </property>
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/icons/mountain13.png</normaloff>:/icons/mountain13.png</iconset>
+   </property>
    <property name="text">
     <string>Show Elevation</string>
    </property>
@@ -220,16 +278,28 @@
    <property name="checkable">
     <bool>true</bool>
    </property>
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/icons/trail.png</normaloff>:/icons/trail.png</iconset>
+   </property>
    <property name="text">
     <string>Show Cadence</string>
    </property>
   </action>
   <action name="actionGo_to_website">
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/icons/home10.png</normaloff>:/icons/home10.png</iconset>
+   </property>
    <property name="text">
     <string>Go to website...</string>
    </property>
   </action>
   <action name="actionExport_Activity">
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/icons/arrow68.png</normaloff>:/icons/arrow68.png</iconset>
+   </property>
    <property name="text">
     <string>Export Activity</string>
    </property>

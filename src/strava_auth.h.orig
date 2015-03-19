@@ -1,6 +1,12 @@
 #ifndef STRAVA_AUTH_H
 #define STRAVA_AUTH_H
 
+/*
+ * Rename this file to strava_auth.h and fill in the
+ * client ids you'd like to use.
+ *
+ */
+
 #define STRAVA_CLIENT_ID ""
 #define STRAVA_CLIENT_SECRET ""
 

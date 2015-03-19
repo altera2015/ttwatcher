@@ -31,6 +31,7 @@ public:
     void setZoom ( int zoom );
     int zoom( ) const;
     bool geoToScreen( qreal latitude, qreal longitude, QPoint & p ) const;
+    int boundsToZoom ( const QRectF & bounds );
     QRectF geoBounds();
 
     void clearLines();

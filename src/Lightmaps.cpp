@@ -255,6 +255,11 @@ bool LightMaps::geoToScreen(qreal latitude, qreal longitude, QPoint &p) const
     return m_Map->geoToScreen(latitude, longitude, p);
 }
 
+int LightMaps::boundsToZoom(const QRectF &bounds)
+{
+    return m_Map->boundsToZoom(bounds);
+}
+
 QRectF LightMaps::geoBounds()
 {
     return m_Map->geoBounds();

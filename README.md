@@ -8,10 +8,17 @@ two projects below had done a lot of the ground work but were written
 for Linux. So I set out to make a quick and dirty Windows version so I could 
 experiment with improving the ttbin parsing / communications.
 
-**DISCLAIMER: I STRONGLY SUGGEST USING THE OFFICIAL APP TO DOWNLOAD YOUR ttbin 
-files.**
+**1.4.0 is the first release to have downloading turned on, this functionality has not been widely tested.**
 
 # Releases
+
+###1.4.0 March 20, 2015 Now Support downloading + GPS QuickFix
+[Download 1.4.0 Installer Here](https://github.com/altera2015/ttwatcher/releases/download/v1.4.0/TTWatcherSetup_x86_1.4.0.0.exe)
+* Support downloading ttbins generally
+* Automatically export to Strava
+* Automatically export to tcx
+* Added settings dialog
+* Added map tile selector
 
 ###1.3.0 March 15, 2015 Fixed installer + Usability
 [Download 1.3.0 Installer Here](https://github.com/altera2015/ttwatcher/releases/download/v1.3.0/TTWatcherSetup_x86_1.3.0.0.exe)

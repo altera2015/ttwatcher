@@ -5,7 +5,7 @@ TEMPLATE = app
 
 win32:LIBS+=-lUser32 -lPsapi -lhid -lsetupapi
 win32:RC_FILE = ttwatcher.rc
-DEFINES+=I_UNDERSTAND_THIS_IS_DANGEROUS
+
 DEFINES+=Q_HTTP_STATIC_BUILD
 
 SOURCES += main.cpp\
@@ -30,7 +30,10 @@ SOURCES += main.cpp\
     flatfileiconprovider.cpp \
     datasmoothing.cpp \
     tcxactivityexporter.cpp \
-    settingsdialog.cpp
+    settingsdialog.cpp \
+    settings.cpp \
+    aboutdialog.cpp \
+    downloaddialog.cpp
 
 win32:SOURCES+=hid.c
 unix:linux:SOURCES+=hidlinux.c
@@ -61,10 +64,15 @@ HEADERS  += mainwindow.h \
     flatfileiconprovider.h \
     datasmoothing.h \
     tcxactivityexporter.h \
-    settingsdialog.h
+    settingsdialog.h \
+    settings.h \
+    aboutdialog.h \
+    downloaddialog.h
 
 FORMS    += mainwindow.ui \
-    settingsdialog.ui
+    settingsdialog.ui \
+    aboutdialog.ui \
+    downloaddialog.ui
 
 RESOURCES += \
     resources.qrc

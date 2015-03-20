@@ -36,7 +36,6 @@ StravaExporter::StravaExporter(QObject *parent) :
     p.setPort(8888);
     p.setType(QNetworkProxy::HttpProxy);
     m_Manager.setProxy(p);
-
 }
 
 QString StravaExporter::name() const
@@ -53,6 +52,7 @@ bool StravaExporter::loadConfig(const WatchPreferences & preferences, QDomElemen
     {
         m_AuthToken = preferences.decodeToken( token.text() );
     }
+    setChanged(false);
 
     return true;
 }
@@ -64,7 +64,11 @@ bool StravaExporter::isEnabled() const
 
 void StravaExporter::setEnabled(bool enabled)
 {
-    m_Enabled = enabled;
+    if ( m_Enabled != enabled )
+    {
+        m_Enabled = enabled;
+        setChanged(true);
+    }
 }
 
 bool StravaExporter::isOnline() const
@@ -79,7 +83,11 @@ bool StravaExporter::autoOpen() const
 
 void StravaExporter::setAutoOpen(bool autoOpen)
 {
-    m_AutoOpen = autoOpen;
+    if ( m_AutoOpen != autoOpen )
+    {
+        m_AutoOpen = autoOpen;
+        setChanged(true);
+    }
 }
 
 QIcon StravaExporter::icon() const
@@ -92,6 +100,7 @@ void StravaExporter::reset()
     m_Enabled = false;
     m_AutoOpen = false;
     m_AuthToken = "";
+    setChanged(false);
 }
 
 bool StravaExporter::hasSetup() const
@@ -160,6 +169,7 @@ void StravaExporter::authCodeAnswer(QJsonDocument &d, int httpCode)
     if ( response.contains("access_token"))
     {
         m_AuthToken = response["access_token"].toString().toUtf8();
+        setChanged(true);
         emit setupFinished(this, true);
     }
     else
@@ -188,6 +198,7 @@ void StravaExporter::saveConfig(const WatchPreferences & preferences, QDomDocume
         element.appendChild(e);
         e.appendChild(text);
     }
+    setChanged(false);
 }
 
 void StravaExporter::exportActivity(ActivityPtr activity)
@@ -272,6 +283,10 @@ void StravaExporter::activitySubmitted(QJsonDocument &d, int httpCode)
             error = error.mid(pos+1);
             QUrl u(QString("https://www.strava.com/activities/%1").arg(error));
             emit exportFinished(true, tr("Duplicate"), u);
+            if ( m_AutoOpen )
+            {
+                QDesktopServices::openUrl(u);
+            }
             return;
         }
         else
@@ -285,6 +300,10 @@ void StravaExporter::activitySubmitted(QJsonDocument &d, int httpCode)
     {
         QUrl u(QString("https://www.strava.com/activities/%1").arg(o["activity_id"].toInt()));
         emit exportFinished(true, tr("Export Successful"), u);
+        if ( m_AutoOpen )
+        {
+            QDesktopServices::openUrl(u);
+        }
         return;
     }
 
@@ -331,6 +350,10 @@ void StravaExporter::activityStatus(QJsonDocument &d, int httpCode, QNetworkRepl
     {
         QUrl u(QString("https://www.strava.com/activities/%1").arg( response["activity_id"].toInt() ));
         emit exportFinished(true, tr("Upload done"), u);
+        if ( m_AutoOpen )
+        {
+            QDesktopServices::openUrl(u);
+        }
     }
     else
     {

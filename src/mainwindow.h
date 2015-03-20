@@ -7,6 +7,9 @@
 #include "activity.h"
 #include "qcustomplot.h"
 #include "elevationloader.h"
+#include "settings.h"
+
+#include <QTimer>
 
 namespace Ui {
 class MainWindow;
@@ -22,25 +25,29 @@ class MainWindow : public QMainWindow
     QVector<double> m_Cadence;
     QVector<double> m_Speed;
     QVector<double> m_Elevation;
-    bool processTTBin(const QString& filename);
-    QString ttdir() const;
+    bool processTTBin(const QString& filename);    
     QFileSystemModel * m_FSModel;
     QCPAxis * m_Axis3;
     QCPAxis * m_Axis4;
     ElevationLoader m_ElevationLoader;
+    QComboBox * m_TileCombo;
+    Settings m_Settings;
+    QTimer m_WatchTimer;
+
     void dragEnterEvent(QDragEnterEvent *e);
     void dropEvent(QDropEvent *e);
 public:
     explicit MainWindow(QWidget *parent = 0);
     ~MainWindow();
 
-signals:
-    void workInfo( QString message, bool done );
-
 private slots:
+    void onTileChanged();
+
+
     void onElevationLoaded(bool success, ActivityPtr activity);
 
-    void onWatchesChanged();
+    void onWatchArrived();
+    void onWatchArrivedDelay();
 
     void onGraphMouseMove(QMouseEvent * event);
 

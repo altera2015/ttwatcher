@@ -82,6 +82,17 @@ void IActivityExporter::writeExportTag(QDomDocument &document, QDomElement &elem
 }
 
 IActivityExporter::IActivityExporter(QObject *parent) :
-    QObject(parent)
+    QObject(parent),
+    m_Changed(false)
 {
+}
+
+bool IActivityExporter::changed() const
+{
+    return m_Changed;
+}
+
+void IActivityExporter::setChanged(bool changed)
+{
+    m_Changed = changed;
 }

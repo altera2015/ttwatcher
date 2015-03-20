@@ -1,3 +1,45 @@
+/****************************************************************************
+**
+** Copyright (C) 2011 Nokia Corporation and/or its subsidiary(-ies).
+** All rights reserved.
+** Contact: Nokia Corporation (qt-info@nokia.com)
+**
+** This file is part of the demonstration applications of the Qt Toolkit.
+**
+** $QT_BEGIN_LICENSE:LGPL$
+** GNU Lesser General Public License Usage
+** This file may be used under the terms of the GNU Lesser General Public
+** License version 2.1 as published by the Free Software Foundation and
+** appearing in the file LICENSE.LGPL included in the packaging of this
+** file. Please review the following information to ensure the GNU Lesser
+** General Public License version 2.1 requirements will be met:
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
+**
+** In addition, as a special exception, Nokia gives you certain additional
+** rights. These rights are described in the Nokia Qt LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
+**
+** GNU General Public License Usage
+** Alternatively, this file may be used under the terms of the GNU General
+** Public License version 3.0 as published by the Free Software Foundation
+** and appearing in the file LICENSE.GPL included in the packaging of this
+** file. Please review the following information to ensure the GNU General
+** Public License version 3.0 requirements will be met:
+** http://www.gnu.org/copyleft/gpl.html.
+**
+** Other Usage
+** Alternatively, this file may be used in accordance with the terms and
+** conditions contained in a signed written agreement between you and Nokia.
+**
+**
+**
+**
+**
+** $QT_END_LICENSE$
+**
+****************************************************************************/
+
+
 #include "SlippyMap.h"
 
 #include <QApplication>
@@ -52,9 +94,17 @@ static void reverseSpiralList ( int start, int end, int startY, int h, QList<QPo
 }
 
 
+//QString path = "http://tile.openstreetmap.org/%1/%2/%3.png";
+// QString path = "http://otile1.mqcdn.com/tiles/1.0.0/map/%1/%2/%3.png";
+// QString path = "http://otile1.mqcdn.com/tiles/1.0.0/sat/%1/%2/%3.png";
+
 
 SlippyMap::SlippyMap(QObject *parent) : QObject(parent), width(400), height(300), zoom(15),
-    latitude(0), longitude(0), locationSet(false)
+    latitude(0),
+    longitude(0),
+    locationSet(false),
+    m_TilePath("http://otile1.mqcdn.com/tiles/1.0.0/map/%1/%2/%3.png")
+
     // latitude(59.9138204), longitude(10.7387413), locationSet(false)
 {    
     m_emptyTile = QPixmap(tdim, tdim);
@@ -273,12 +323,11 @@ bool SlippyMap::download(QPoint grab)
         return true;
     }
 
-    //QString path = "http://tile.openstreetmap.org/%1/%2/%3.png";   
-    QString path = "http://otile1.mqcdn.com/tiles/1.0.0/map/%1/%2/%3.png";
-    // QString path = "http://otile1.mqcdn.com/tiles/1.0.0/sat/%1/%2/%3.png";
-    m_url = QUrl(path.arg(zoom).arg(grab.x()).arg(grab.y()));
+
+    m_url = QUrl(m_TilePath.arg(zoom).arg(grab.x()).arg(grab.y()));
 
 
+    //qDebug() << m_url;
     QNetworkCacheMetaData md = m_Cache->metaData(m_url);
     QDateTime now = QDateTime::currentDateTime();
 
@@ -305,6 +354,13 @@ bool SlippyMap::download(QPoint grab)
 
         return false;
     }
+}
+
+void SlippyMap::setTilePath(const QString &tilePath)
+{
+    m_TilePath = tilePath;
+    m_tilePixmaps.clear();
+    invalidate();
 }
 
 

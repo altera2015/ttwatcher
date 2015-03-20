@@ -440,7 +440,7 @@ bool TTBinReader::readSwim(QIODevice &ttbin, ActivityPtr activity)
 
 bool TTBinReader::skipTag(QIODevice &ttbin, quint8 tag, int size)
 {
-    int pos = ttbin.pos();
+    //int pos = ttbin.pos();
     QByteArray data = ttbin.read(size);
     if ( data.length() != size )
     {

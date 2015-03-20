@@ -34,14 +34,19 @@ public:
     WatchPreferencesPtr preferencesForName ( const QString & name );
     WatchPreferencesPtr defaultPreferences();
 
+    void savePreferences(WatchPreferencesPtr preferences );
     void savePreferences( );
+    void loadPreferences(const QString &filename);
     void loadPreferences( );
+
     QString preferenceDir() const;
 
 signals:
 
     void ttArrived();
     void ttRemoved();
+    void allExportingFinished(); // this gets fired for each WatchPreferences object, so while one watch might be done, not all of them could.
+    void exportError( QString error );
 
 public slots:
 

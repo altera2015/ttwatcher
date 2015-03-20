@@ -1,0 +1,33 @@
+﻿[
+	{
+		"name": "Street",
+		"url": "http://otile1.mqcdn.com/tiles/1.0.0/map/%1/%2/%3.png",
+		"copyright" : "© OpenStreetMap contributors"		
+	},
+	{
+		"name": "Satellite",
+		"url": "http://otile1.mqcdn.com/tiles/1.0.0/sat/%1/%2/%3.png",
+		"copyright" : "Portions Courtesy NASA/JPL-Caltech and U.S. Depart. of Agriculture, Farm Service Agency"		
+	},	
+	{
+		"name": "OpenStreetMap",
+		"url": "http://tile.openstreetmap.org/%1/%2/%3.png",
+		"copyright" : "© OpenStreetMap contributors"		
+	},		
+	{
+		"name": "Open Cycle Map",
+		"url": "http://a.tile.opencyclemap.org/cycle/%1/%2/%3.png",
+		"copyright" : "© OpenStreetMap contributors"		
+	},				
+	{
+		"name": "Hike and Bike Map",
+        "url": "http://a.tiles.wmflabs.org/hikebike/%1/%2/%3.png",
+		"copyright" : "© OpenStreetMap contributors"		
+    },
+    {
+        "name": "Stamen Water Color",
+        "url": "http://a.tile.stamen.com/watercolor/%1/%2/%3.jpg",
+        "copyright" : "Map tiles by Stamen Design, under CC BY 3.0. Data by OpenStreetMap, under CC BY SA"
+    }
+
+]

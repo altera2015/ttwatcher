@@ -1,6 +1,7 @@
 #include "tcxactivityexporter.h"
 #include "tcxexport.h"
 #include <QFile>
+#include "watchpreferences.h"
 
 TCXActivityExporter::TCXActivityExporter(QObject *parent) :
     IActivityExporter(parent),
@@ -17,7 +18,9 @@ QString TCXActivityExporter::name() const
 
 bool TCXActivityExporter::loadConfig(const WatchPreferences &preferences, QDomElement element)
 {
+    Q_UNUSED(preferences);
     parseExportTag(element, "TCX", m_Enabled, m_AutoOpen);
+    setChanged(false);
     return true;
 }
 
@@ -28,7 +31,11 @@ bool TCXActivityExporter::isEnabled() const
 
 void TCXActivityExporter::setEnabled(bool enabled)
 {
-    m_Enabled = enabled;
+    if ( m_Enabled != enabled )
+    {
+        m_Enabled = enabled;
+        setChanged(true);
+    }
 }
 
 bool TCXActivityExporter::isOnline() const
@@ -43,6 +50,7 @@ bool TCXActivityExporter::autoOpen() const
 
 void TCXActivityExporter::setAutoOpen(bool autoOpen)
 {
+    Q_UNUSED(autoOpen);
 }
 
 QIcon TCXActivityExporter::icon() const
@@ -62,11 +70,14 @@ bool TCXActivityExporter::hasSetup() const
 
 void TCXActivityExporter::setup(QWidget *parent)
 {
+    Q_UNUSED(parent);
 }
 
 void TCXActivityExporter::saveConfig(const WatchPreferences &preferences, QDomDocument &document, QDomElement &element)
 {
+    Q_UNUSED(preferences);
     writeExportTag(document, element, "TCX", m_Enabled, m_AutoOpen);
+    setChanged(false);
 }
 
 void TCXActivityExporter::exportActivity(ActivityPtr activity)
@@ -87,5 +98,5 @@ void TCXActivityExporter::exportActivity(ActivityPtr activity)
 
     e.save(&f, activity);
     f.close();
-    emit exportFinished(false, tr("TCX Export success."), QUrl::fromLocalFile( f.fileName() ));
+    emit exportFinished(true, tr("TCX Export success."), QUrl::fromLocalFile( f.fileName() ));
 }

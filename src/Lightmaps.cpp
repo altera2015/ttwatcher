@@ -1,6 +1,53 @@
+/****************************************************************************
+**
+** Copyright (C) 2011 Nokia Corporation and/or its subsidiary(-ies).
+** All rights reserved.
+** Contact: Nokia Corporation (qt-info@nokia.com)
+**
+** This file is part of the demonstration applications of the Qt Toolkit.
+**
+** $QT_BEGIN_LICENSE:LGPL$
+** GNU Lesser General Public License Usage
+** This file may be used under the terms of the GNU Lesser General Public
+** License version 2.1 as published by the Free Software Foundation and
+** appearing in the file LICENSE.LGPL included in the packaging of this
+** file. Please review the following information to ensure the GNU Lesser
+** General Public License version 2.1 requirements will be met:
+** http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html.
+**
+** In addition, as a special exception, Nokia gives you certain additional
+** rights. These rights are described in the Nokia Qt LGPL Exception
+** version 1.1, included in the file LGPL_EXCEPTION.txt in this package.
+**
+** GNU General Public License Usage
+** Alternatively, this file may be used under the terms of the GNU General
+** Public License version 3.0 as published by the Free Software Foundation
+** and appearing in the file LICENSE.GPL included in the packaging of this
+** file. Please review the following information to ensure the GNU General
+** Public License version 3.0 requirements will be met:
+** http://www.gnu.org/copyleft/gpl.html.
+**
+** Other Usage
+** Alternatively, this file may be used in accordance with the terms and
+** conditions contained in a signed written agreement between you and Nokia.
+**
+**
+**
+**
+**
+** $QT_END_LICENSE$
+**
+****************************************************************************/
+
 #include "Lightmaps.h"
 
-LightMaps::LightMaps(QWidget *parent) : QWidget(parent), pressed(false), snapped(false), dragging(false)
+LightMaps::LightMaps(QWidget *parent) :
+    QWidget(parent),
+    m_Pressed(false),
+    m_Snapped(false),
+    m_Dragging(false),
+    m_Copyright("Map data CCbySA 2009 OpenStreetMap.org contributors")
+
 {
     m_Map = new SlippyMap(this);
     connect(m_Map, SIGNAL(updated(QRect)), SLOT(updateMap(QRect)));
@@ -145,10 +192,21 @@ void LightMaps::paintEvent(QPaintEvent *event)
     }
 
 
-    p.setPen(Qt::darkGray);
+    QRect r = rect();
 
-    p.drawText(rect(),  Qt::AlignBottom | Qt::TextWordWrap,
-               "Map data CCbySA 2009 OpenStreetMap.org contributors");
+    r.translate(10, -10);
+
+    p.setPen(Qt::white);
+    p.drawText(r,  Qt::AlignBottom | Qt::TextWordWrap,
+               m_Copyright);
+
+
+    p.setPen(Qt::black);
+
+    r.translate(1,1);
+    p.drawText(r,  Qt::AlignBottom | Qt::TextWordWrap,
+               m_Copyright);
+
     p.end();
 
 }
@@ -162,8 +220,8 @@ void LightMaps::mousePressEvent(QMouseEvent *event)
 {
     if (event->buttons() != Qt::LeftButton)
         return;
-    pressed = snapped = true;
-    pressPos = dragPos = event->pos();
+    m_Pressed = m_Snapped = true;
+    m_PressPos = m_DragPos = event->pos();
 }
 
 void LightMaps::mouseMoveEvent(QMouseEvent *event)
@@ -171,25 +229,25 @@ void LightMaps::mouseMoveEvent(QMouseEvent *event)
     if (!event->buttons())
         return;
 
-    if (!pressed || !snapped)
+    if (!m_Pressed || !m_Snapped)
     {
-        QPoint delta = event->pos() - pressPos;
-        pressPos = event->pos();
+        QPoint delta = event->pos() - m_PressPos;
+        m_PressPos = event->pos();
         m_Map->pan(delta);
         emit dragBegin();
-        dragging = true;
+        m_Dragging = true;
         return;
     }
     else
     {
         const int threshold = 10;
-        QPoint delta = event->pos() - pressPos;
-        if (snapped)
+        QPoint delta = event->pos() - m_PressPos;
+        if (m_Snapped)
         {
-            snapped &= delta.x() < threshold;
-            snapped &= delta.y() < threshold;
-            snapped &= delta.x() > -threshold;
-            snapped &= delta.y() > -threshold;
+            m_Snapped &= delta.x() < threshold;
+            m_Snapped &= delta.y() < threshold;
+            m_Snapped &= delta.x() > -threshold;
+            m_Snapped &= delta.y() > -threshold;
         }
     }
 
@@ -197,9 +255,9 @@ void LightMaps::mouseMoveEvent(QMouseEvent *event)
 
 void LightMaps::mouseReleaseEvent(QMouseEvent *)
 {
-    if ( dragging ) {
+    if ( m_Dragging ) {
         emit dragEnd();
-        dragging = false;
+        m_Dragging = false;
     }
 
     update();
@@ -284,6 +342,12 @@ void LightMaps::clearCircles()
 void LightMaps::addCircle(qreal latitude, qreal longitude)
 {
     m_Circles.append( QPointF( longitude, latitude ));
+}
+
+void LightMaps::setTilePath(const QString &tilePath, const QString &copyright)
+{
+    m_Map->setTilePath(tilePath);
+    m_Copyright = copyright;
 }
 
 

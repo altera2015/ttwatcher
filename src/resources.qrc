@@ -23,4 +23,7 @@
     <qresource prefix="/html/data">
         <file>running32.png</file>
     </qresource>
+    <qresource prefix="/cfg">
+        <file>tiles.json</file>
+    </qresource>
 </RCC>

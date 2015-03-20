@@ -11,7 +11,7 @@
 void TTManager::checkvds(quint16 vid, const DeviceIdList &deviceIds)
 {
     // prepare list of currently attached TT's
-    QString currentPaths;
+    QStringList currentPaths;
     foreach ( const TTWatch * watch, m_TTWatchList )
     {
         currentPaths.append( watch->path() );
@@ -34,8 +34,8 @@ void TTManager::checkvds(quint16 vid, const DeviceIdList &deviceIds)
 
                 TTWatch * w = find(path);
                 if ( w )
-                {
-                    currentPaths.remove(path);
+                {                    
+                    currentPaths.removeOne(path);
                 }
                 else
                 {
@@ -130,6 +130,8 @@ WatchPreferencesPtr TTManager::preferences(const QString &serial)
     }
 
     WatchPreferencesPtr wp = WatchPreferencesPtr::create(serial);
+    connect(wp.data(), SIGNAL(allExportsFinished()), this, SIGNAL(allExportingFinished()));
+    connect(wp.data(), SIGNAL(exportError(QString)), this, SIGNAL(exportError(QString)));
     m_Preferences[ serial ] = wp;
     return wp;
 }
@@ -154,6 +156,50 @@ WatchPreferencesPtr TTManager::defaultPreferences()
     return preferences("DEFAULT");
 }
 
+void TTManager::savePreferences(WatchPreferencesPtr preferences)
+{
+    QDomDocument d;
+    QDomElement preferencesElement = d.createElement("preferences");
+    d.appendChild(preferencesElement);
+
+    QDomElement nameElement = d.createElement("watchName");
+    nameElement.appendChild(  d.createTextNode( preferences->name() ) );
+    preferencesElement.appendChild(nameElement);
+
+    QDomElement serialElement = d.createElement("serial");
+    serialElement.appendChild(  d.createTextNode( preferences->serial() ) );
+    preferencesElement.appendChild(serialElement);
+
+    QDomElement exportersElement = d.createElement("exporters");
+    preferencesElement.appendChild(exportersElement);
+
+    QDomElement onlineElement = d.createElement("online");
+    exportersElement.appendChild(onlineElement);
+
+    QDomElement offlineElement = d.createElement("offline");
+    exportersElement.appendChild(offlineElement);
+
+    foreach ( IActivityExporterPtr exp, preferences->exporters())
+    {
+        exp->saveConfig( *preferences.data(), d, exp->isOnline() ? onlineElement : offlineElement );
+    }
+
+    QString path = preferenceDir();
+    QDir mkpathd;
+    mkpathd.mkpath(path);
+
+    QString filename = path + QDir::separator() + "watchPrefs_" + preferences->serial() + ".xml";
+
+    QFile f( filename );
+    if ( !f.open(QIODevice::WriteOnly))
+    {
+        qCritical() << "TTManager::savePreferences / could not write preferences file " << filename;
+        return;
+    }
+    f.write( d.toByteArray() );
+    f.close();
+}
+
 void TTManager::savePreferences()
 {
     PreferencesMap::iterator i = m_Preferences.begin();
@@ -168,46 +214,99 @@ void TTManager::savePreferences()
             continue;
         }
 
-        QDomDocument d;
-        QDomElement preferencesElement = d.createElement("preferences");
-        d.appendChild(preferencesElement);
-
-        QDomElement nameElement = d.createElement("watchName");
-        nameElement.appendChild(  d.createTextNode( preferences->name() ) );
-        preferencesElement.appendChild(nameElement);
-
-        QDomElement serialElement = d.createElement("serial");
-        serialElement.appendChild(  d.createTextNode( preferences->serial() ) );
-        preferencesElement.appendChild(serialElement);
-
-        QDomElement exportersElement = d.createElement("exporters");
-        preferencesElement.appendChild(exportersElement);
-
-        QDomElement onlineElement = d.createElement("online");
-        exportersElement.appendChild(onlineElement);
-
-        QDomElement offlineElement = d.createElement("offline");
-        exportersElement.appendChild(offlineElement);
-
+        bool changed = false;
         foreach ( IActivityExporterPtr exp, preferences->exporters())
         {
-            exp->saveConfig( *preferences.data(), d, exp->isOnline() ? onlineElement : offlineElement );
+            changed |= exp->changed();
         }
 
-        QString path = preferenceDir();
-        QDir mkpathd;
-        mkpathd.mkpath(path);
-
-        QString filename = path + QDir::separator() + "watchPrefs_" + preferences->serial() + ".xml";
-
-        QFile f( filename );
-        if ( !f.open(QIODevice::WriteOnly))
+        if ( !changed )
         {
-            qCritical() << "TTManager::savePreferences / could not write preferences file " << filename;
             continue;
         }
-        f.write( d.toByteArray() );
-        f.close();
+
+        TTWatch * w = watch( preferences->serial() );
+
+        if ( w )
+        {
+            savePreferences(preferences);
+
+            QByteArray prefData;
+            if ( !w->downloadPreferences(prefData))
+            {
+                qCritical() << "TTManager::savePreferences / could not load preferences.";
+                continue;
+            }
+
+            prefData = preferences->updatePreferences(prefData);
+
+            if ( !w->uploadPreferences(prefData) )
+            {
+                qCritical() << "TTManager::savePreferences / could not save preferences to watch.";
+            }
+        }
+        else
+        {
+            // watch not plugged in, could still be the default device...
+            if ( preferences->serial() == "DEFAULT" )
+            {
+                savePreferences(preferences);
+            }
+            else
+            {
+                // nope, really not here, revert to previous
+                qWarning() << "TTManager::savePreferences / watch gone, reverting changes.";
+                QString filename = preferenceDir() + QDir::separator() + "watchPrefs_" + preferences->serial() + ".xml";
+                loadPreferences(filename);
+            }
+        }
+    }
+}
+
+void TTManager::loadPreferences(const QString & filename)
+{
+    QFile f( filename );
+    if ( !f.open(QIODevice::ReadOnly))
+    {
+        qDebug() << "TTManager::loadPreferences / could not load preferences.";
+        return;
+    }
+
+    QByteArray xml = f.readAll();
+    f.close();
+
+    QDomDocument d;
+    d.setContent(xml);
+
+    QDomElement preferencesElement = d.firstChildElement("preferences");
+    if ( preferencesElement.isNull() )
+    {
+        qDebug() << "TTManager::loadPreferences / not a preferences XML file. " << filename;
+        return;
+    }
+
+    QDomElement nameElement = preferencesElement.firstChildElement("watchName");
+    QDomElement serialElement = preferencesElement.firstChildElement("serial");
+    if ( nameElement.isNull() || serialElement.isNull() )
+    {
+        qDebug() << "TTManager::loadPreferences / missing element name or serial. " << filename;
+        return;
+    }
+
+    QString name = nameElement.text();
+    QString serial = serialElement.text();
+
+    WatchPreferencesPtr p = preferences( serial );
+    p->setName(name);
+
+    QDomElement exportersElement = preferencesElement.firstChildElement("exporters");
+
+    QDomElement onlineElement = exportersElement.firstChildElement("online");
+    QDomElement offlineElement = exportersElement.firstChildElement("offline");
+
+    foreach ( IActivityExporterPtr exp, p->exporters())
+    {
+        exp->loadConfig( *p.data(), exp->isOnline() ? onlineElement : offlineElement );
     }
 }
 
@@ -222,48 +321,9 @@ void TTManager::loadPreferences()
     while ( i.hasNext() )
     {
         QString filename = i.next();
-        QFile f( filename );
-        if ( !f.open(QIODevice::ReadOnly))
-        {
-            continue;
-        }
 
-        QByteArray xml = f.readAll();
-        f.close();
 
-        QDomDocument d;
-        d.setContent(xml);
-
-        QDomElement preferencesElement = d.firstChildElement("preferences");
-        if ( preferencesElement.isNull() )
-        {
-            qDebug() << "TTManager::loadPreferences / not a preferences XML file. " << i.fileName();
-            continue;
-        }
-
-        QDomElement nameElement = preferencesElement.firstChildElement("watchName");
-        QDomElement serialElement = preferencesElement.firstChildElement("serial");
-        if ( nameElement.isNull() || serialElement.isNull() )
-        {
-            qDebug() << "TTManager::loadPreferences / missing element name or serial. " << i.fileName();
-            continue;
-        }
-
-        QString name = nameElement.text();
-        QString serial = serialElement.text();
-
-        WatchPreferencesPtr p = preferences( serial );
-        p->setName(name);
-
-        QDomElement exportersElement = preferencesElement.firstChildElement("exporters");
-
-        QDomElement onlineElement = exportersElement.firstChildElement("online");
-        QDomElement offlineElement = exportersElement.firstChildElement("offline");
-
-        foreach ( IActivityExporterPtr exp, p->exporters())
-        {
-            exp->loadConfig( *p.data(), exp->isOnline() ? onlineElement : offlineElement );
-        }
+        loadPreferences(filename);
     }
 
     if ( !defaultPreferences() )

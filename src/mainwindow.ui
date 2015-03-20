@@ -151,6 +151,9 @@
    <addaction name="menuHelp"/>
   </widget>
   <widget class="QToolBar" name="mainToolBar">
+   <property name="windowTitle">
+    <string>Main Toolbar</string>
+   </property>
    <property name="iconSize">
     <size>
      <width>32</width>
@@ -171,7 +174,7 @@
   <widget class="QStatusBar" name="statusBar"/>
   <widget class="QToolBar" name="toolBar">
    <property name="windowTitle">
-    <string>toolBar</string>
+    <string>Graph Toolbar</string>
    </property>
    <property name="layoutDirection">
     <enum>Qt::LeftToRight</enum>
@@ -221,11 +224,6 @@
    </property>
    <property name="text">
     <string>About</string>
-   </property>
-  </action>
-  <action name="actionDownload_Workouts">
-   <property name="text">
-    <string>Download Workouts...</string>
    </property>
   </action>
   <action name="actionShow_in_explorer">

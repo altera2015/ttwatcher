@@ -34,6 +34,8 @@ public:
     virtual void setup( QWidget * parent ) = 0;
     virtual void saveConfig( const WatchPreferences & preferences, QDomDocument & document, QDomElement & element ) = 0;
 
+    bool changed() const;
+    void setChanged( bool changed );
 
 signals:
     void exportFinished( bool success, QString message, QUrl url );
@@ -41,6 +43,8 @@ signals:
 
 public slots:
     virtual void exportActivity( ActivityPtr activity ) = 0;
+private:
+    bool m_Changed;
 };
 typedef QSharedPointer<IActivityExporter> IActivityExporterPtr;
 typedef QList<IActivityExporterPtr> IActivityExporterList;

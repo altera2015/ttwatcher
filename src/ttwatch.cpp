@@ -29,21 +29,8 @@
 #define TT_GET_VERSION          0x21 // responds with 01 08 07 21 31 2E 38 2E 32 35 radix: ascii: ...!1.8.25
 
 #define TT_GET_BATTERY_LEVEL    0x23
+#define TT_UNKNOWN_1D           0x1d
 
-
-#define FILE_SYSTEM_FIRMWARE        (0x000000f0)
-#define FILE_GPSQUICKFIX_DATA       (0x00010100)
-#define FILE_GPS_FIRMWARE           (0x00010200)
-#define FILE_FIRMWARE_UPDATE_LOG    (0x00013001)
-#define FILE_MANIFEST1              (0x00850000)
-#define FILE_MANIFEST2              (0x00850001)
-#define FILE_PREFERENCES_XML        (0x00f20000)
-#define FILE_TYPE_MASK              (0xffff0000)
-#define FILE_RACE_DATA              (0x00710000)
-#define FILE_RACE_HISTORY_DATA      (0x00720000)
-#define FILE_HISTORY_DATA           (0x00730000)
-#define FILE_HISTORY_SUMMARY        (0x00830000)
-#define FILE_TTBIN_DATA             (0x00910000)
 
 /* File 00010100 contains GPS Quickfix data.
  * This can be downloaded from http://gpsquickfix.services.tomtom.com/fitness/sifgps.f2p3enc.ee
@@ -471,7 +458,7 @@ int TTWatch::batteryLevel()
     return (quint8)response.at(1);
 }
 
-bool TTWatch::downloadPreferences(QIODevice &dest)
+bool TTWatch::downloadPreferences(QByteArray &data)
 {
     WatchOpener wo(this);
     if ( !wo.open() )
@@ -480,15 +467,31 @@ bool TTWatch::downloadPreferences(QIODevice &dest)
         return false;
     }
 
-    QByteArray data;
     if ( readFile(data, FILE_PREFERENCES_XML, true ) )
     {
-
-        dest.write(data);
         return true;
     }
 
     return false;
+}
+
+bool TTWatch::uploadPreferences(const QByteArray &data)
+{
+    return writeFile(data, FILE_PREFERENCES_XML, true);
+}
+
+bool TTWatch::postGPSFix()
+{
+    WatchOpener wo(this);
+    if ( !wo.open() )
+    {
+        qWarning() << "TTWatch::postGPSFix / failed to open.";
+        return false;
+    }
+
+    QByteArray postGPS, response;
+    postGPS.append((char)TT_UNKNOWN_1D);
+    return sendCommand(postGPS, response);
 }
 
 
@@ -584,44 +587,3 @@ QStringList TTWatch::download(const QString &basePath, bool deleteWhenDone)
 
     return files;
 }
-
-
-/*
-void TTWatch::exportFinished(bool success, QString message, QUrl url)
-{
-    if ( success )
-    {
-        QDesktopServices::openUrl(url);
-    }
-}
-
-void TTWatch::setupFinished(bool success)
-{
-    if ( !success )
-    {
-        return;
-    }
-
-    WatchOpener wo(this);
-    if ( !wo.open() )
-    {
-        qWarning() << "TTWatch::setupFinished / failed to open.";
-        return;
-    }
-
-    QByteArray sourceXml;
-    if ( !readFile(sourceXml,FILE_PREFERENCES_XML, true) )
-    {
-        qDebug() << "TTWatch::setupFinished / could not read settings.";
-        return;
-    }
-
-    QByteArray updatedXml = m_Preferences.updatePreferences(sourceXml);
-
-    if ( !writeFile(updatedXml, FILE_PREFERENCES_XML, true))
-    {
-        qDebug() << "TTWatch::setupFinished / could not write settings.";
-        return;
-    }
-}
-*/

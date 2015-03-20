@@ -1,16 +1,23 @@
 #include "settingsdialog.h"
 #include "ui_settingsdialog.h"
 
-SettingsDialog::SettingsDialog(TTManager * ttManager, QWidget *parent) :
+SettingsDialog::SettingsDialog(Settings *settings, TTManager * ttManager, QWidget *parent) :
     QDialog(parent),
+    m_Settings(settings),
     m_TTManager(ttManager),
     ui(new Ui::SettingsDialog)
 {
     ui->setupUi(this);
     display();
 
-    connect(ui->enabledChecked, SIGNAL(clicked()), this, SLOT(onChanged()));
-    connect(ui->autoOpenCheckBox, SIGNAL(clicked()), this, SLOT(onChanged()));
+    connect(ttManager, SIGNAL(ttArrived()), this, SLOT(display()));
+    connect(ttManager, SIGNAL(ttRemoved()), this, SLOT(display()));
+
+    connect(ui->enabledChecked, SIGNAL(clicked()), this, SLOT(onExporterChanged()));
+    connect(ui->autoOpenCheckBox, SIGNAL(clicked()), this, SLOT(onExporterChanged()));
+
+    connect(ui->autoDownloadCheckbox, SIGNAL(clicked()), this, SLOT(onSettingChanged()));
+
 
     ui->okButton->setEnabled(false);
 
@@ -43,12 +50,18 @@ void SettingsDialog::display()
     for(;i!=m_TTManager->preferences().end();i++)
     {
         WatchPreferencesPtr p = i.value();
-        ui->watchBox->addItem( p->name(), p->serial() );
-        if ( p != defPref )
+
+        // only allow preferences to be changed for a watch that is connected.
+
+        if ( p->serial() == "DEFAULT" || m_TTManager->watch( p->serial() ) )
         {
-            selectIndex = index;
+            ui->watchBox->addItem( p->name(), p->serial() );
+            if ( p != defPref )
+            {
+                selectIndex = index;
+            }
+            index++;
         }
-        index++;
     }
 
     if ( selectIndex>=0 )
@@ -64,6 +77,9 @@ void SettingsDialog::display()
     }
     ui->exporterList->setCurrentRow(0);
     displayWatchPreferences();
+
+
+    ui->autoDownloadCheckbox->setChecked( m_Settings->autoDownload() );
 }
 
 void SettingsDialog::displayWatchPreferences()
@@ -97,11 +113,13 @@ IActivityExporterPtr SettingsDialog::currentExporter()
 
 void SettingsDialog::on_exporterList_currentRowChanged(int currentRow)
 {
+    Q_UNUSED(currentRow);
     displayWatchPreferences();
 }
 
 void SettingsDialog::on_watchBox_currentIndexChanged(int index)
 {
+    Q_UNUSED(index);
     displayWatchPreferences();
 }
 
@@ -118,7 +136,7 @@ void SettingsDialog::onSetupFinished(IActivityExporter *exporter, bool success)
     }
 }
 
-void SettingsDialog::onChanged()
+void SettingsDialog::onExporterChanged()
 {
     IActivityExporterPtr exp = currentExporter();
     if ( !exp )
@@ -128,6 +146,12 @@ void SettingsDialog::onChanged()
 
     exp->setEnabled( ui->enabledChecked->isChecked() );
     exp->setAutoOpen( ui->autoOpenCheckBox->isChecked() );
+    ui->okButton->setEnabled(true);
+}
+
+void SettingsDialog::onSettingChanged()
+{
+    m_Settings->setAutoDownload( ui->autoDownloadCheckbox->isChecked() );
     ui->okButton->setEnabled(true);
 }
 
@@ -156,11 +180,13 @@ void SettingsDialog::on_okButton_clicked()
 void SettingsDialog::on_SettingsDialog_accepted()
 {
     m_TTManager->savePreferences();
+    m_Settings->save();
     ui->okButton->setEnabled(false);
 }
 
 void SettingsDialog::on_SettingsDialog_rejected()
 {
     m_TTManager->loadPreferences();
+    m_Settings->load();
     ui->okButton->setEnabled(false);
 }

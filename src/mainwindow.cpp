@@ -7,6 +7,10 @@
 #include <QFileInfo>
 #include <QFileSystemModel>
 #include <QDesktopServices>
+#include <QComboBox>
+#include <QJsonDocument>
+#include <QJsonArray>
+#include <QJsonObject>
 
 #include "flatfileiconprovider.h"
 #include "ttbinreader.h"
@@ -15,6 +19,8 @@
 #include "singleshot.h"
 #include "datasmoothing.h"
 #include "settingsdialog.h"
+#include "aboutdialog.h"
+#include "downloaddialog.h"
 
 bool MainWindow::processTTBin(const QString& filename)
 {
@@ -257,6 +263,7 @@ void MainWindow::onElevationLoaded(bool success, ActivityPtr activity)
     QPointF center = bounds.center();
     int zoom = ui->mapWidget->boundsToZoom( bounds );
     ui->mapWidget->setCenter(zoom, center.y(), center.x());
+    ui->mapWidget->repaint();
 
 
 
@@ -275,10 +282,6 @@ void MainWindow::onElevationLoaded(bool success, ActivityPtr activity)
 
 
 
-QString MainWindow::ttdir() const
-{
-    return QDir::homePath() + QDir::separator() + "TomTom MySports";
-}
 
 void MainWindow::dragEnterEvent(QDragEnterEvent *e)
 {
@@ -333,6 +336,8 @@ MainWindow::MainWindow(QWidget *parent) :
 {
     ui->setupUi(this);
 
+    m_Settings.load();
+
     setAcceptDrops(true);
 
     ui->actionShow_Cadence->setChecked(true);
@@ -340,31 +345,20 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->actionShow_Heart_Rate->setChecked(true);
     ui->actionShow_Speed->setChecked(true);
 
-
-    ui->actionDownload_Workouts->setEnabled(false);
-
     connect(ui->graph, SIGNAL(mouseMove(QMouseEvent*)), this, SLOT(onGraphMouseMove(QMouseEvent*)));
-    connect(&m_TTManager, SIGNAL(ttArrived()), this, SLOT(onWatchesChanged()));
-    connect(&m_TTManager, SIGNAL(ttRemoved()), this, SLOT(onWatchesChanged()));
+    connect(&m_TTManager, SIGNAL(ttArrived()), this, SLOT(onWatchArrived()));
     connect(&m_ElevationLoader, SIGNAL(loaded(bool,ActivityPtr)), this, SLOT(onElevationLoaded(bool,ActivityPtr)));
+    connect(&m_WatchTimer, SIGNAL(timeout()), this, SLOT(onWatchArrivedDelay()));
+    m_WatchTimer.setSingleShot(true);
+    m_WatchTimer.setInterval(500);
 
-    ui->mapWidget->setLatitude(59.9138204);
-    ui->mapWidget->setLongitude(10.7387413);
 
-#ifdef I_UNDERSTAND_THIS_IS_DANGEROUS
     m_TTManager.startSearch();
-    ui->actionDownload_Workouts->setVisible(true);
-    ui->actionExport_Activity->setVisible(true);
-#else
-    ui->actionDownload_Workouts->setVisible(false);
-    ui->actionExport_Activity->setVisible(false);
-#endif
-
 
     m_FSModel = new QFileSystemModel(this);
     FlatFileIconProvider * icons = new FlatFileIconProvider();
     m_FSModel->setIconProvider(icons);
-    m_FSModel->setRootPath( ttdir() );
+    m_FSModel->setRootPath( Settings::ttdir() );
     m_FSModel->setFilter(QDir::AllDirs|QDir::Files|QDir::NoDotAndDotDot);
     QStringList fl;
     fl.append("*.ttbin");
@@ -372,17 +366,77 @@ MainWindow::MainWindow(QWidget *parent) :
     m_FSModel->setNameFilters(fl);
     ui->treeView->setModel(m_FSModel);
 
-    QModelIndex idx = m_FSModel->index( ttdir() );
+    QModelIndex idx = m_FSModel->index( Settings::ttdir() );
     ui->treeView->setRootIndex(idx);
     ui->treeView->hideColumn(3);
     ui->treeView->hideColumn(2);
     ui->treeView->hideColumn(1);
+
+
+
+    m_TileCombo = new QComboBox;
+    ui->toolBar->addSeparator();
+    ui->toolBar->addWidget( m_TileCombo );
+
+
+    int tileIndex = 0;
+    int tileSelectIndex = -1;
+    QFile f(":/cfg/tiles.json");
+    if ( f.open(QIODevice::ReadOnly))
+    {
+        QByteArray json = f.readAll();
+        f.close();
+
+        QJsonParseError pe;
+        QJsonDocument d = QJsonDocument::fromJson( json, &pe );
+        if ( pe.error == QJsonParseError::NoError )
+        {
+            foreach ( QJsonValue v, d.array())
+            {
+                QJsonObject entry = v.toObject();
+                m_TileCombo->addItem( entry["name"].toString(), entry);
+
+                if ( entry["url"].toString() == m_Settings.tileUrl() )
+                {
+                    tileSelectIndex = tileIndex;
+                }
+                tileIndex++;
+            }
+        }
+        else
+        {
+            qWarning() << "Could not parse JSON tile file." << pe.errorString();
+        }
+
+        m_TileCombo->setCurrentIndex(tileSelectIndex);
+        onTileChanged();
+    }
+
+
+    connect(m_TileCombo,SIGNAL(currentIndexChanged(int)), this, SLOT(onTileChanged()));
+
+
+    ui->mapWidget->setCenter(m_Settings.lastZoom(), m_Settings.lastLatitude(), m_Settings.lastLongitude());
+
+}
+
+void MainWindow::onTileChanged()
+{
+    QJsonObject o = m_TileCombo->currentData().toJsonObject();
+    ui->mapWidget->setTilePath(o["url"].toString(), o["copyright"].toString());
+    m_Settings.setTileUrl(o["url"].toString());
+    m_Settings.save();
 }
 
 MainWindow::~MainWindow()
 {
+    m_Settings.setLastLatitude( ui->mapWidget->latitude() );
+    m_Settings.setLastLongitude( ui->mapWidget->longitude() );
+    m_Settings.setLastZoom( ui->mapWidget->zoom() );
+    m_Settings.save();
     delete ui;
 }
+
 
 /*
  * When a Watch is connected
@@ -390,107 +444,50 @@ MainWindow::~MainWindow()
  * 1. Load the preferences file.
  * 2. Load the .ttbin's
  * 3. Export .ttbin's as specified in preferences file
- * 4. Upload GPS Quick Data.
+ * 4. Upload GPS Quick fix Data.
  * 5. Store preferences files on drive. This file may only be modified if Watch is present.
  *
  */
-void MainWindow::onWatchesChanged()
+void MainWindow::onWatchArrived()
+{        
+    m_WatchTimer.start();
+}
+
+void MainWindow::onWatchArrivedDelay()
 {
-    ui->actionDownload_Workouts->setEnabled( m_TTManager.watches().count() > 0 );
-
-    foreach ( TTWatch * watch, m_TTManager.watches())
+    if ( !m_Settings.autoDownload() )
     {
-        QByteArray prefData;
-        QBuffer buffer(&prefData);
-        buffer.open(QIODevice::WriteOnly);
+        return;
+    }
 
-        /**********************************************/
-        /* 1. LOADING PREFERENCES */
-        /**********************************************/
+    DownloadDialog * dd = findChild<DownloadDialog*>();
+    if ( !dd )
+    {
+        dd = new DownloadDialog(&m_Settings, &m_TTManager, this);
+    }
 
-        emit workInfo(tr("Loading Preferences"), false);
-
-        if ( !watch->downloadPreferences(buffer) )
-        {
-            qCritical() << "MainWindow::onWatchesChanged / unable to load preferences file.";
-            emit workInfo(tr("Failed to load preferences"), true);
-            continue;
-        }
-
-        buffer.close();
-
-        /*QFile tempf("tempf.xml");
-        tempf.open(QIODevice::WriteOnly);
-        tempf.write(prefData);
-        tempf.close();*/
-
-        WatchPreferencesPtr preferences = m_TTManager.preferences( watch->serial() );
-        if ( !preferences )
-        {
-            qCritical() << "MainWindow::onWatchesChanged / did not get a preferences ptr.";
-            continue;
-        }
-
-        if ( !preferences->parsePreferences( prefData ) )
-        {
-            qCritical() << "MainWindow::onWatchesChanged / failed to parse preferences.";
-            emit workInfo(tr("Failed to parse preferences"), true);
-            continue;
-        }
-
-        /**********************************************/
-        /* 2. LOAD TTBINS */
-        /**********************************************/
-
-        emit workInfo(tr("Downloading .ttbins"), false);
-
-        QStringList files = watch->download(ttdir() + QDir::separator() + preferences->name(), true);
-
-        emit workInfo(tr("Exporting .ttbins"), false);
-
-        /**********************************************/
-        /* 3. EXPORT TTBINS */
-        /**********************************************/
-
-        foreach ( const QString & filename, files )
-        {
-            if ( !preferences->exportFile(filename) )
-            {
-                emit workInfo(tr("Exporting .ttbin failed. %1").arg(filename), false);
-            }
-        }
+    if ( dd->processWatches() == QDialog::Accepted )
+    {
 
         // place the UI interaction on a slight delay to give the m_FSModel a chance
         // to pick up the new files.
-        SingleShot::go([this, files](){
+        SingleShot::go([this, dd](){
 
+            QStringList files = dd->filesDownloaded();
             if ( files.count() > 0 )
             {
                 QModelIndex index = m_FSModel->index( files.first() );
                 if ( index.isValid() )
                 {
-                    ui->treeView->setCurrentIndex(index);
                     ui->treeView->scrollTo(index);
+                    ui->treeView->setCurrentIndex(index);
+                    on_treeView_clicked(index);
                 }
             }
 
         }, 1000, true, this);
 
-        /**********************************************/
-        /* 4. APPLY GPS QUICK DATA */
-        /**********************************************/
-
-        // soon.
-        emit workInfo(tr("Uploading GPS Quick data"), false);
-
     }
-
-    emit workInfo(tr("Done"), true);
-
-    /**********************************************/
-    /* 5. Save preferences data. */
-    /**********************************************/
-    m_TTManager.savePreferences();
 }
 
 void MainWindow::onGraphMouseMove(QMouseEvent *event)
@@ -538,7 +535,7 @@ void MainWindow::on_actionProcess_TTBIN_triggered()
     static QString dir;
     if ( dir.length() == 0 )
     {
-        dir = ttdir();
+        dir = Settings::ttdir();
     }
 
     QString fn = QFileDialog::getOpenFileName(this, tr("Find .ttbin file"), dir, "ttbin files (*.ttbin)");
@@ -581,7 +578,7 @@ void MainWindow::on_actionShow_in_explorer_triggered()
 {
     QModelIndex index = ui->treeView->currentIndex();
 
-    QString filename = ttdir();
+    QString filename = Settings::ttdir();
     if ( index.isValid() )
     {
         QFileInfo f = m_FSModel->fileInfo( index );
@@ -592,8 +589,13 @@ void MainWindow::on_actionShow_in_explorer_triggered()
 
 
 void MainWindow::on_actionAbout_triggered()
-{
-    QMessageBox::information(this, tr("TTWatcher"), tr("TTWatcher %1\n\nttbin tcx exporter, handles even corrupted ttbin files.\nhttps://github.com/altera2015/ttwatcher").arg(VER_FILEVERSION_STR));
+{    
+    AboutDialog * ad = findChild<AboutDialog*>();
+    if ( !ad)
+    {
+        ad = new AboutDialog(this);
+    }
+    ad->show();
 }
 
 void MainWindow::on_actionShow_Speed_toggled(bool arg1)
@@ -689,7 +691,7 @@ void MainWindow::on_actionSettings_triggered()
     SettingsDialog * s = findChild<SettingsDialog*>();
     if ( !s )
     {
-        s = new SettingsDialog (&m_TTManager, this);
+        s = new SettingsDialog (&m_Settings, &m_TTManager, this);
     }
 
     s->show();

@@ -8,6 +8,22 @@
 
 #include "hidapi.h"
 
+
+
+#define FILE_SYSTEM_FIRMWARE        (0x000000f0)
+#define FILE_GPSQUICKFIX_DATA       (0x00010100)
+#define FILE_GPS_FIRMWARE           (0x00010200)
+#define FILE_FIRMWARE_UPDATE_LOG    (0x00013001)
+#define FILE_MANIFEST1              (0x00850000)
+#define FILE_MANIFEST2              (0x00850001)
+#define FILE_PREFERENCES_XML        (0x00f20000)
+#define FILE_TYPE_MASK              (0xffff0000)
+#define FILE_RACE_DATA              (0x00710000)
+#define FILE_RACE_HISTORY_DATA      (0x00720000)
+#define FILE_HISTORY_DATA           (0x00730000)
+#define FILE_HISTORY_SUMMARY        (0x00830000)
+#define FILE_TTBIN_DATA             (0x00910000)
+
 typedef struct ttfile {
     quint32 id;
     quint32 length;
@@ -82,7 +98,10 @@ public:
     bool readFile(QByteArray & data , quint32 fileId, bool processEvents = false);
     bool writeFile(const QByteArray & source, quint32 fileId, bool processEvents = false);
     int batteryLevel();    
-    bool downloadPreferences( QIODevice & dest );
+
+    bool downloadPreferences( QByteArray & data );
+    bool uploadPreferences( const QByteArray & data );
+    bool postGPSFix();
 
     // convenience functions
     QStringList download( const QString & basePath, bool deleteWhenDone );

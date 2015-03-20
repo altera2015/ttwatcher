@@ -28,18 +28,21 @@ public:
 
     bool exportActivity(ActivityPtr activity);
     bool exportFile(const QString &filename);
+    bool isExporting();
 
 signals:
     void exportFinished( bool success, QString message, QUrl url );
-    void setupFinished( bool success );
-
+    void allExportsFinished();
+    void exportError( QString error );
 public slots:
 private slots:
+    void onExportFinished(bool success, QString message, QUrl url);
 
 private:
 
     QString m_Name;
     QString m_Serial;
+    int m_ExportFinishedCounter;
     IActivityExporterList m_Exporters;
 
     QByteArray scrambleToken(const QByteArray &sourceToken) const;

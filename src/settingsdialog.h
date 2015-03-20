@@ -3,6 +3,7 @@
 
 #include <QDialog>
 #include "ttmanager.h"
+#include "settings.h"
 
 namespace Ui {
 class SettingsDialog;
@@ -11,9 +12,11 @@ class SettingsDialog;
 class SettingsDialog : public QDialog
 {
     Q_OBJECT
+    Settings * m_Settings;
     TTManager * m_TTManager;
+
 public:
-    explicit SettingsDialog(TTManager * ttManager, QWidget *parent = 0);
+    explicit SettingsDialog(Settings * settings, TTManager * ttManager, QWidget *parent = 0);
     ~SettingsDialog();
 
 private slots:
@@ -24,7 +27,8 @@ private slots:
 
     void onSetupFinished( IActivityExporter *exporter, bool success );
 
-    void onChanged();
+    void onExporterChanged();
+    void onSettingChanged();
 
     void on_setupButton_clicked();
 
@@ -36,10 +40,13 @@ private slots:
 
     void on_SettingsDialog_rejected();
 
+private slots:
+    void display();
+
 private:
     Ui::SettingsDialog *ui;
 
-    void display();
+
     void displayWatchPreferences();
     IActivityExporterPtr currentExporter();
 };

@@ -10,15 +10,16 @@
 
 WatchPreferences::WatchPreferences(const QString &serial, QObject *parent) :
     QObject(parent),
-    m_Serial(serial)
+    m_Serial(serial),
+    m_ExportFinishedCounter(0)
 {
     m_Exporters.append( StravaExporterPtr::create() );
     m_Exporters.append( TCXActivityExporterPtr::create() );
 
     foreach ( IActivityExporterPtr exptr, m_Exporters)
-    {
-        connect(exptr.data(), SIGNAL(setupFinished(bool)), this, SIGNAL(setupFinished(bool)));
+    {        
         connect(exptr.data(), SIGNAL(exportFinished(bool,QString,QUrl)), this, SIGNAL(exportFinished(bool,QString,QUrl)));
+        connect(exptr.data(), SIGNAL(exportFinished(bool,QString,QUrl)), this, SLOT(onExportFinished(bool,QString,QUrl)));
     }
 }
 
@@ -226,6 +227,7 @@ bool WatchPreferences::exportActivity(ActivityPtr activity)
     {
         if ( ae->isEnabled() )
         {
+            m_ExportFinishedCounter++;
             ae->exportActivity(activity);
         }
     }
@@ -236,16 +238,42 @@ bool WatchPreferences::exportActivity(ActivityPtr activity)
 bool WatchPreferences::exportFile(const QString &filename)
 {
     QFile f(filename);
-    if ( f.open(QIODevice::ReadOnly))
+    if ( !f.open(QIODevice::ReadOnly))
     {
+        qDebug() << "WatchPreferences::exportFile / could not open file " << filename;
         return false;
     }
     TTBinReader br;
     ActivityPtr a = br.read(f, true);
     if ( !a )
     {
+        qDebug() << "WatchPreferences::exportFile / could not parse file " << filename;
         return false;
     }
 
     return exportActivity(a);
+}
+
+bool WatchPreferences::isExporting()
+{
+    return m_ExportFinishedCounter > 0;
+}
+
+void WatchPreferences::onExportFinished(bool success,QString message,QUrl url)
+{
+    if ( !success )
+    {
+        emit exportError(message);
+    }
+
+    m_ExportFinishedCounter--;
+    if ( m_ExportFinishedCounter < 0 )
+    {
+        m_ExportFinishedCounter = 0;
+    }
+
+    if ( m_ExportFinishedCounter == 0)
+    {
+        emit allExportsFinished();
+    }
 }

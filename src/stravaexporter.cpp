@@ -12,7 +12,7 @@
 #include <QUrlQuery>
 #include <QJsonDocument>
 #include <QJsonObject>
-#include <QDomNamedNodeMap>
+
 
 #include "httpserver.h"
 #include "singleshot.h"
@@ -31,7 +31,7 @@ StravaExporter::StravaExporter(QObject *parent) :
 {
 
     connect(&m_Manager, SIGNAL(finished(QNetworkReply*)), this, SLOT(requestFinished(QNetworkReply*)));
-#ifdef DEBUG
+#ifdef _DEBUG
     QNetworkProxy p;
     p.setHostName("localhost");
     p.setPort(8888);
@@ -148,7 +148,7 @@ void StravaExporter::setup(QWidget *parent)
     q.addQueryItem("response_type", "code");
     q.addQueryItem("redirect_uri",  QUrl::toPercentEncoding( cburl.toString(QUrl::FullyEncoded) ));
     q.addQueryItem("scope", "write,view_private");
-    q.addQueryItem("response_type", "code");
+
     stravaAuthRequest.setQuery(q);
 
     QDesktopServices::openUrl(stravaAuthRequest);

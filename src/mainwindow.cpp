@@ -465,6 +465,7 @@ MainWindow::~MainWindow()
 
 bool MainWindow::nativeEventFilter(const QByteArray &eventType, void *message, long *l)
 {
+    Q_UNUSED(l);
 #ifdef WIN32
 
     MSG * msg = ( MSG * ) message;

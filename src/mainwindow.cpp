@@ -11,6 +11,8 @@
 #include <QJsonDocument>
 #include <QJsonArray>
 #include <QJsonObject>
+#include <QAbstractEventDispatcher>
+
 
 #include "flatfileiconprovider.h"
 #include "ttbinreader.h"
@@ -21,6 +23,8 @@
 #include "settingsdialog.h"
 #include "aboutdialog.h"
 #include "downloaddialog.h"
+
+#include <dbt.h>
 
 bool MainWindow::processTTBin(const QString& filename)
 {
@@ -100,8 +104,6 @@ void MainWindow::onElevationLoaded(bool success, ActivityPtr activity)
 
     quint64 firstTime = 0;
 
-
-    // QVector<int> cadence;
     DataSmoothing<int> cadence;
     DataSmoothing<int> speed;
     DataSmoothing<int> heartBeat;
@@ -418,6 +420,30 @@ MainWindow::MainWindow(QWidget *parent) :
 
     ui->mapWidget->setCenter(m_Settings.lastZoom(), m_Settings.lastLatitude(), m_Settings.lastLongitude());
 
+
+#ifdef WIN32
+
+    connect(&m_DeviceArriveDebounce, SIGNAL(timeout()), &m_TTManager, SLOT(checkForTTs()));
+    m_DeviceArriveDebounce.setInterval(500);
+    m_DeviceArriveDebounce.setSingleShot(true);
+
+    QAbstractEventDispatcher::instance()->installNativeEventFilter(this);
+
+    GUID hidGUID = { 0x4d1e55b2, 0xf16f, 0x11cf,
+                          0x88,0xcb,0x00,0x11,0x11,0x00,0x00,0x30 };
+
+    DEV_BROADCAST_DEVICEINTERFACE notificationFilter;
+    ZeroMemory( &notificationFilter, sizeof(notificationFilter) );
+    notificationFilter.dbcc_size = sizeof(DEV_BROADCAST_DEVICEINTERFACE);
+    notificationFilter.dbcc_devicetype = DBT_DEVTYP_DEVICEINTERFACE;
+    notificationFilter.dbcc_classguid = hidGUID;
+    HDEVNOTIFY status = RegisterDeviceNotification((HWND)this->winId(),
+            &notificationFilter, DEVICE_NOTIFY_WINDOW_HANDLE);
+    if( !status )
+    {
+        qDebug() << "MainWindow::MainWindow / Could not RegisterDeviceNotification.";
+    }
+#endif
 }
 
 void MainWindow::onTileChanged()
@@ -435,6 +461,30 @@ MainWindow::~MainWindow()
     m_Settings.setLastZoom( ui->mapWidget->zoom() );
     m_Settings.save();
     delete ui;
+}
+
+bool MainWindow::nativeEventFilter(const QByteArray &eventType, void *message, long *l)
+{
+#ifdef WIN32
+
+    MSG * msg = ( MSG * ) message;
+
+    if ( msg == 0 )
+    {
+        return false;
+    }
+
+    #define DBT_DEVNODES_CHANGED 0x0007
+
+    if ( msg->message == WM_DEVICECHANGE && msg->wParam == DBT_DEVNODES_CHANGED )
+    {
+        qDebug() << "MainWindow::nativeEventFilter / got device change.";
+        m_DeviceArriveDebounce.start();
+    }
+
+    return false;
+
+#endif
 }
 
 

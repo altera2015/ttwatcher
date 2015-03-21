@@ -3,19 +3,20 @@
 
 #include <QMainWindow>
 #include <QFileSystemModel>
+#include <QTimer>
+#include <QAbstractNativeEventFilter>
+
 #include "ttmanager.h"
 #include "activity.h"
 #include "qcustomplot.h"
 #include "elevationloader.h"
 #include "settings.h"
 
-#include <QTimer>
-
 namespace Ui {
 class MainWindow;
 }
 
-class MainWindow : public QMainWindow
+class MainWindow : public QMainWindow, public QAbstractNativeEventFilter
 {
     Q_OBJECT
     TTManager m_TTManager;
@@ -33,6 +34,7 @@ class MainWindow : public QMainWindow
     QComboBox * m_TileCombo;
     Settings m_Settings;
     QTimer m_WatchTimer;
+    QTimer m_DeviceArriveDebounce;
 
     void dragEnterEvent(QDragEnterEvent *e);
     void dropEvent(QDropEvent *e);
@@ -40,6 +42,7 @@ public:
     explicit MainWindow(QWidget *parent = 0);
     ~MainWindow();
 
+    virtual bool nativeEventFilter(const QByteArray &eventType, void *message, long *l);
 private slots:
     void onTileChanged();
 

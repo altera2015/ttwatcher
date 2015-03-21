@@ -33,7 +33,8 @@ SOURCES += main.cpp\
     settingsdialog.cpp \
     settings.cpp \
     aboutdialog.cpp \
-    downloaddialog.cpp
+    downloaddialog.cpp \
+    runkeeperexporter.cpp
 
 win32:SOURCES+=hid.c
 unix:linux:SOURCES+=hidlinux.c
@@ -67,7 +68,8 @@ HEADERS  += mainwindow.h \
     settingsdialog.h \
     settings.h \
     aboutdialog.h \
-    downloaddialog.h
+    downloaddialog.h \
+    runkeeperexporter.h
 
 FORMS    += mainwindow.ui \
     settingsdialog.ui \

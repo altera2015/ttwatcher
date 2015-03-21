@@ -31,11 +31,13 @@ StravaExporter::StravaExporter(QObject *parent) :
 {
 
     connect(&m_Manager, SIGNAL(finished(QNetworkReply*)), this, SLOT(requestFinished(QNetworkReply*)));
+#ifdef DEBUG
     QNetworkProxy p;
     p.setHostName("localhost");
     p.setPort(8888);
     p.setType(QNetworkProxy::HttpProxy);
     m_Manager.setProxy(p);
+#endif
 }
 
 QString StravaExporter::name() const

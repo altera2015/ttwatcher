@@ -16,6 +16,9 @@
 void DownloadDialog::showEvent(QShowEvent *e)
 {
     QDialog::showEvent(e);
+
+    ui->logWidget->clear();
+
     // we have to run process a bit after showEvent is done, otherwise
     // we might call accepted while still in showEvent,
     // which apparently fails.
@@ -34,11 +37,13 @@ DownloadDialog::DownloadDialog(Settings *settings, TTManager *ttManager, QWidget
     connect(&m_Manager, SIGNAL(finished(QNetworkReply*)), this, SLOT(onFinished(QNetworkReply*)));
     connect(m_TTManager, SIGNAL(allExportingFinished()), this, SLOT(onExportingFinished()));
     connect(m_TTManager, SIGNAL(exportError(QString)), this, SLOT(onExportError(QString)));
+#ifdef DEBUG
     QNetworkProxy p;
     p.setHostName("localhost");
     p.setPort(8888);
     p.setType(QNetworkProxy::HttpProxy);
     m_Manager.setProxy(p);
+#endif
 }
 
 DownloadDialog::~DownloadDialog()
@@ -65,7 +70,6 @@ QStringList DownloadDialog::filesDownloaded() const
 
 void DownloadDialog::process()
 {
-    ui->logWidget->clear();
     bool shouldDownloadQuickFix = false;
 
     if ( m_TTManager->watches().count() == 0 )

@@ -94,7 +94,7 @@ TTManager::~TTManager()
 void TTManager::startSearch()
 {
     QTimer * t = new QTimer(this);
-    t->setInterval(10000);
+    t->setInterval(60000);
     connect(t, SIGNAL(timeout()), this, SLOT(checkForTTs()));
     t->start();
     checkForTTs();

@@ -1,0 +1,13 @@
+#ifndef RUNKEEPER_AUTH_H
+#define RUNKEEPER_AUTH_H
+
+/*
+ * Rename this file to runkeeper_auth.h and fill in the
+ * client ids you'd like to use.
+ *
+ */
+
+#define RUNKEEPER_CLIENT_ID ""
+#define RUNKEEPER_CLIENT_SECRET ""
+
+#endif // STRAVA_AUTH_H

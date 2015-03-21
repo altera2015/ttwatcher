@@ -15,10 +15,12 @@
         <file>strava.png</file>
         <file>tcx.png</file>
         <file>settings20.png</file>
+        <file>runkeeper.png</file>
     </qresource>
     <qresource prefix="/html">
         <file>404.html</file>
         <file>strava.html</file>
+        <file>runkeeper.html</file>
     </qresource>
     <qresource prefix="/html/data">
         <file>running32.png</file>

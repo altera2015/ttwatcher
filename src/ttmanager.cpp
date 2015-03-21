@@ -312,7 +312,7 @@ void TTManager::loadPreferences(const QString & filename)
 
 void TTManager::loadPreferences()
 {
-    m_Preferences.clear();
+    // m_Preferences.clear();
 
     QString path = preferenceDir();
     QStringList sl;

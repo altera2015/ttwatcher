@@ -12,6 +12,12 @@ experiment with improving the ttbin parsing / communications.
 
 # Releases
 
+###1.5.0 March 20, 2015 Added Device Change listener for faster watch detection
+[Download 1.5.0 Installer Here](https://github.com/altera2015/ttwatcher/releases/download/v1.5.0/TTWatcherSetup_x86_1.5.0.0.exe)
+* Removed debug proxy that made it into the release
+* Added WM_DEVICECHANGE listener for faster response to device arrival. 
+
+
 ###1.4.0 March 20, 2015 Now Support downloading + GPS QuickFix
 [Download 1.4.0 Installer Here](https://github.com/altera2015/ttwatcher/releases/download/v1.4.0/TTWatcherSetup_x86_1.4.0.0.exe)
 * Support downloading ttbins generally

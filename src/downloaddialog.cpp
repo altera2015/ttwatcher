@@ -37,7 +37,7 @@ DownloadDialog::DownloadDialog(Settings *settings, TTManager *ttManager, QWidget
     connect(&m_Manager, SIGNAL(finished(QNetworkReply*)), this, SLOT(onFinished(QNetworkReply*)));
     connect(m_TTManager, SIGNAL(allExportingFinished()), this, SLOT(onExportingFinished()));
     connect(m_TTManager, SIGNAL(exportError(QString)), this, SLOT(onExportError(QString)));
-#ifdef DEBUG
+#ifdef USE_DEBUG_PROXY
     QNetworkProxy p;
     p.setHostName("localhost");
     p.setPort(8888);

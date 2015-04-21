@@ -29,7 +29,7 @@ RunKeeperExporter::RunKeeperExporter(QObject *parent) :
     m_Icon( QIcon(":/icons/runkeeper.png") )
 {
     connect(&m_Manager, SIGNAL(finished(QNetworkReply*)), this, SLOT(onRequestFinished(QNetworkReply*)));
-#ifdef _DEBUG
+#ifdef USE_DEBUG_PROXY
     QNetworkProxy p;
     p.setHostName("localhost");
     p.setPort(8888);

@@ -31,7 +31,7 @@ StravaExporter::StravaExporter(QObject *parent) :
 {
 
     connect(&m_Manager, SIGNAL(finished(QNetworkReply*)), this, SLOT(requestFinished(QNetworkReply*)));
-#ifdef _DEBUG
+#ifdef USE_DEBUG_PROXY
     QNetworkProxy p;
     p.setHostName("localhost");
     p.setPort(8888);

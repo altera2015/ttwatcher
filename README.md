@@ -80,18 +80,21 @@ You might have to copy the hid.lib to your Release or Debug output directory if 
 ## Linux (Ubuntu 14.04)
 
 ```
-sudo apt-get install qtbase5-dev qt5-qmake
+$ sudo apt-get install qtbase5-dev qt5-qmake
 
-export QTCHOOSER_RUNTOOL=qtconfig
-export QT_SELECT=5
+# enable QT5 if also QT4 is installed
+$ export QTCHOOSER_RUNTOOL=qtconfig
+$ export QT_SELECT=5
 
-qmake -v
+$ qmake -v
 QMake version 3.0
 Using Qt version 5.2.1 in /usr/lib/x86_64-linux-gnu
 
-cd ttwatcher
-mkdir build
-cd build
-qmake ../TTWatcherMain.pro 
-make
+$ cd ttwatcher
+$ mkdir build && cd build
+$ qmake ../TTWatcherMain.pro 
+$ make
+$ sudo make install
+$ sudo install -m 755 -p src/ttwatcher /usr/local/bin
+$ ttwatcher
 ```

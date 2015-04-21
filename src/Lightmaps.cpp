@@ -40,6 +40,7 @@
 ****************************************************************************/
 
 #include "Lightmaps.h"
+#include <QApplication>
 
 LightMaps::LightMaps(QWidget *parent) :
     QWidget(parent),

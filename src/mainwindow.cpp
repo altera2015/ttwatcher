@@ -24,7 +24,7 @@
 #include "aboutdialog.h"
 #include "downloaddialog.h"
 
-#ifdef _WIN32
+#ifdef WIN32
 #include <dbt.h>
 #endif
 

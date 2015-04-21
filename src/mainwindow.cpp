@@ -24,7 +24,9 @@
 #include "aboutdialog.h"
 #include "downloaddialog.h"
 
+#ifdef WIN32
 #include <dbt.h>
+#endif
 
 bool MainWindow::processTTBin(const QString& filename)
 {

@@ -197,16 +197,16 @@ void RunKeeperExporter::exportActivity(ActivityPtr activity)
     {
     case Activity::RUNNING:
     case Activity::TREADMILL:
-        af["type"] = "Running";
+        af["type"] = QStringLiteral("Running");
         break;
     case Activity::BIKING:
-        af["type"] = "Cycling";
+        af["type"] = QStringLiteral("Cycling");
         break;
     case Activity::SWIMMING:
-        af["type"] = "Swimming";
+        af["type"] = QStringLiteral("Swimming");
         break;
     default:
-        af["type"] = "Other";
+        af["type"] = QStringLiteral("Other");
     }
 
     QJsonArray heartRate;
@@ -232,7 +232,7 @@ void RunKeeperExporter::exportActivity(ActivityPtr activity)
                 pathEntry["longitude"] = tp->longitude();
                 pathEntry["latitude"] = tp->latitude();
                 pathEntry["altitude"] = tp->altitude();
-                pathEntry["type"] = "gps";
+                pathEntry["type"] = QStringLiteral("gps");
                 path.append( pathEntry );
             }
             if ( tp->heartRate() > 0 )

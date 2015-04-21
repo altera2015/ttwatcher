@@ -319,7 +319,7 @@
   <customwidget>
    <class>LightMaps</class>
    <extends>QWidget</extends>
-   <header>lightmaps.h</header>
+   <header>Lightmaps.h</header>
    <container>1</container>
   </customwidget>
   <customwidget>

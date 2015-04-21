@@ -72,4 +72,29 @@ Original inspiration from:
 
 # Building
 
-Install Qt 5.x Framework and load up the TTWatcherMain.pro file in the src directory. On Windows you might have to copy the hid.lib to your Release or Debug output directory if you get linking errors.
+Install Qt 5.x Framework and load up the TTWatcherMain.pro file in the src directory.
+
+## Windows
+You might have to copy the hid.lib to your Release or Debug output directory if you get linking errors.
+
+## Linux (Ubuntu 14.04)
+
+```
+$ sudo apt-get install qtbase5-dev qt5-qmake
+
+# enable QT5 if also QT4 is installed
+$ export QTCHOOSER_RUNTOOL=qtconfig
+$ export QT_SELECT=5
+
+$ qmake -v
+QMake version 3.0
+Using Qt version 5.2.1 in /usr/lib/x86_64-linux-gnu
+
+$ cd ttwatcher
+$ mkdir build && cd build
+$ qmake ../TTWatcherMain.pro 
+$ make
+$ sudo make install
+$ sudo install -m 755 -p src/ttwatcher /usr/local/bin
+$ ttwatcher
+```

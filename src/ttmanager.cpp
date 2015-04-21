@@ -334,7 +334,11 @@ void TTManager::loadPreferences()
 
 QString TTManager::preferenceDir() const
 {
+#if QT_VERSION < QT_VERSION_CHECK(5, 4, 0) 
+    return QStandardPaths::writableLocation( QStandardPaths::ConfigLocation );
+#else
     return QStandardPaths::writableLocation( QStandardPaths::AppLocalDataLocation );
+#endif
 }
 
 

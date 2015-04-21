@@ -231,7 +231,11 @@ void Settings::loadQuickFix()
 
 QString Settings::preferenceDir()
 {
+#if QT_VERSION < QT_VERSION_CHECK(5, 4, 0)
+    return QStandardPaths::writableLocation( QStandardPaths::ConfigLocation );
+#else
     return QStandardPaths::writableLocation( QStandardPaths::AppLocalDataLocation );
+#endif
 }
 
 QString Settings::settingsFilename()

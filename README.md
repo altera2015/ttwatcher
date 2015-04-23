@@ -86,11 +86,22 @@ $ sudo apt-get install qtbase5-dev qt5-qmake
 $ export QTCHOOSER_RUNTOOL=qtconfig
 $ export QT_SELECT=5
 
+# Ubuntu 14.04
 $ qmake -v
 QMake version 3.0
 Using Qt version 5.2.1 in /usr/lib/x86_64-linux-gnu
 
-$ cd ttwatcher
+# Ubuntu 14.10
+$ qmake -v
+QMake version 3.0
+Using Qt version 5.3.0 in /usr/lib/x86_64-linux-gnu
+
+$ cd ttwatcher/src
+$ cp trava_auth.h.orig strava_auth.h
+$ cp runkeeper_auth.h.orig runkeeper_auth.h
+<Enter your oauth client credentials>
+
+$ cd ..
 $ mkdir build && cd build
 $ qmake ../TTWatcherMain.pro 
 $ make
@@ -98,3 +109,9 @@ $ sudo make install
 $ sudo install -m 755 -p src/ttwatcher /usr/local/bin
 $ ttwatcher
 ```
+
+If you want to develop using a GUI IDE:
+```
+$ sudo apt-get install qtcreator
+```
+Import project by opening the TTWatcherMain.pro

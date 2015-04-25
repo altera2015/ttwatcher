@@ -174,7 +174,12 @@ void Settings::load()
 
 QString Settings::ttdir()
 {
-    return QDir::homePath() + QDir::separator() + "TomTom MySports";
+    QString path = QDir::homePath() + QDir::separator() + "TomTom MySports";
+    QDir dir(path);
+    if (!dir.exists()) {
+        dir.mkdir(path);
+    }
+    return path;
 }
 
 void Settings::saveQuickFix()
@@ -240,11 +245,21 @@ QString Settings::preferenceDir()
 
 QString Settings::settingsFilename()
 {
-    return preferenceDir() + QDir::separator() + "settings.json";
+    QString path = preferenceDir();
+    QDir dir(path);
+    if (!dir.exists()) {
+        dir.mkdir(path);
+    }
+    return path + QDir::separator() + "settings.json";
 }
 
 QString Settings::quickFixFilename()
 {
-    return preferenceDir() + QDir::separator() + "quickfix.json";
+    QString path = preferenceDir();
+    QDir dir(path);
+    if (!dir.exists()) {
+        dir.mkdir(path);
+    }
+    return path + QDir::separator() + "quickfix.json";
 }
 

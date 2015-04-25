@@ -77,12 +77,12 @@ Install Qt 5.x Framework and load up the TTWatcherMain.pro file in the src direc
 ## Windows
 You might have to copy the hid.lib to your Release or Debug output directory if you get linking errors.
 
-## Linux (Ubuntu 14.04)
+## Linux (Ubuntu)
 
 ```
-$ sudo apt-get install qtbase5-dev qt5-qmake
+$ sudo apt-get install libusb-1.0.0-dev qtbase5-dev qt5-qmake
 
-# enable QT5 if also QT4 is installed
+# enable QT5 if also QT4 is installed (only needed for Ubuntu 14.xx)
 $ export QTCHOOSER_RUNTOOL=qtconfig
 $ export QT_SELECT=5
 
@@ -95,6 +95,11 @@ Using Qt version 5.2.1 in /usr/lib/x86_64-linux-gnu
 $ qmake -v
 QMake version 3.0
 Using Qt version 5.3.0 in /usr/lib/x86_64-linux-gnu
+
+# Ubuntu 15.04
+$ qmake -v
+QMake version 3.0
+Using Qt version 5.4.1 in /usr/lib/x86_64-linux-gnu
 
 $ cd ttwatcher/src
 $ cp trava_auth.h.orig strava_auth.h
@@ -114,4 +119,4 @@ If you want to develop using a GUI IDE:
 ```
 $ sudo apt-get install qtcreator
 ```
-Import project by opening the TTWatcherMain.pro
+Import project by opening the TTWatcherMain.pro or choose Import from GitHub.

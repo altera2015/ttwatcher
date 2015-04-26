@@ -520,8 +520,11 @@ struct hid_device_info  HID_API_EXPORT *hid_enumerate(unsigned short vendor_id, 
 						interface_num = intf_desc->bInterfaceNumber;
 
 						/* Check the VID/PID against the arguments */
-						if ((vendor_id == 0x0 && product_id == 0x0) ||
-						    (vendor_id == dev_vid && product_id == dev_pid)) {
+                        if ((vendor_id == 0x0 && product_id == 0x0) ||
+                            ( product_id == vendor_id && product_id == product_id) ||
+                            ( vendor_id == 0x0 && product_id == product_id ) ||
+                            ( vendor_id == dev_vid && product_id == 0x0 )) {
+
 							struct hid_device_info *tmp;
 
 							/* VID/PID match. Create the record. */
@@ -537,9 +540,7 @@ struct hid_device_info  HID_API_EXPORT *hid_enumerate(unsigned short vendor_id, 
 							/* Fill out the record */
 							cur_dev->next = NULL;
 							cur_dev->path = make_path(dev, interface_num);
-							
 							res = libusb_open(dev, &handle);
-
 							if (res >= 0) {
 								/* Serial Number */
 								if (desc.iSerialNumber > 0)

@@ -16,6 +16,7 @@
         <file>tcx.png</file>
         <file>settings20.png</file>
         <file>runkeeper.png</file>
+        <file>save-file.png</file>
     </qresource>
     <qresource prefix="/html">
         <file>404.html</file>

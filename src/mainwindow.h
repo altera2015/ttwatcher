@@ -38,6 +38,7 @@ class MainWindow : public QMainWindow, public QAbstractNativeEventFilter
 
     void dragEnterEvent(QDragEnterEvent *e);
     void dropEvent(QDropEvent *e);
+    void download();
 public:
     explicit MainWindow(QWidget *parent = 0);
     ~MainWindow();
@@ -51,6 +52,7 @@ private slots:
 
     void onWatchArrived();
     void onWatchArrivedDelay();
+
 
     void onGraphMouseMove(QMouseEvent * event);
 
@@ -77,6 +79,8 @@ private slots:
     void on_actionExport_Activity_triggered();
 
     void on_actionSettings_triggered();
+
+    void on_actionDownload_from_watch_triggered();
 
 private:
     Ui::MainWindow *ui;

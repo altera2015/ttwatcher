@@ -332,6 +332,38 @@ void MainWindow::dropEvent(QDropEvent *e)
     }
 }
 
+void MainWindow::download()
+{
+    DownloadDialog * dd = findChild<DownloadDialog*>();
+    if ( !dd )
+    {
+        dd = new DownloadDialog(&m_Settings, &m_TTManager, this);
+    }
+
+    if ( dd->processWatches() == QDialog::Accepted )
+    {
+
+        // place the UI interaction on a slight delay to give the m_FSModel a chance
+        // to pick up the new files.
+        SingleShot::go([this, dd](){
+
+            QStringList files = dd->filesDownloaded();
+            if ( files.count() > 0 )
+            {
+                QModelIndex index = m_FSModel->index( files.first() );
+                if ( index.isValid() )
+                {
+                    ui->treeView->scrollTo(index);
+                    ui->treeView->setCurrentIndex(index);
+                    on_treeView_clicked(index);
+                }
+            }
+
+        }, 1000, true, this);
+
+    }
+}
+
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow),
@@ -512,35 +544,7 @@ void MainWindow::onWatchArrivedDelay()
     {
         return;
     }
-
-    DownloadDialog * dd = findChild<DownloadDialog*>();
-    if ( !dd )
-    {
-        dd = new DownloadDialog(&m_Settings, &m_TTManager, this);
-    }
-
-    if ( dd->processWatches() == QDialog::Accepted )
-    {
-
-        // place the UI interaction on a slight delay to give the m_FSModel a chance
-        // to pick up the new files.
-        SingleShot::go([this, dd](){
-
-            QStringList files = dd->filesDownloaded();
-            if ( files.count() > 0 )
-            {
-                QModelIndex index = m_FSModel->index( files.first() );
-                if ( index.isValid() )
-                {
-                    ui->treeView->scrollTo(index);
-                    ui->treeView->setCurrentIndex(index);
-                    on_treeView_clicked(index);
-                }
-            }
-
-        }, 1000, true, this);
-
-    }
+    download();
 }
 
 void MainWindow::onGraphMouseMove(QMouseEvent *event)
@@ -749,4 +753,9 @@ void MainWindow::on_actionSettings_triggered()
 
     s->show();
 
+}
+
+void MainWindow::on_actionDownload_from_watch_triggered()
+{
+    download();
 }

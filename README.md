@@ -8,7 +8,7 @@ two projects below had done a lot of the ground work but were written
 for Linux. So I set out to make a quick and dirty Windows version so I could 
 experiment with improving the ttbin parsing / communications.
 
-**1.4.0 is the first release to have downloading turned on, this functionality has not been widely tested.**
+![](https://raw.githubusercontent.com/altera2015/ttwatcher/master/screenshot1.jpg)
 
 # Releases
 

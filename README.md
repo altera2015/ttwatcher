@@ -79,6 +79,14 @@ You might have to copy the hid.lib to your Release or Debug output directory if 
 
 ## Linux (Ubuntu 14.04)
 
+On Linux if your app does not run as root you'll need to have permission to access the hid device. The easiest way is this:
+```
+$ cat /etc/udev/rules.d/99-tomtom.rules
+SUBSYSTEMS=="usb", ATTRS{idVendor}=="1390", ATTRS{idProduct}=="7474", MODE="666"
+```
+More discerning users might setup a special user group and only allow that user group access. 
+
+
 ```
 $ sudo apt-get install qtbase5-dev qt5-qmake
 

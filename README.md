@@ -100,11 +100,15 @@ $ qmake -v
 QMake version 3.0
 Using Qt version 5.2.1 in /usr/lib/x86_64-linux-gnu
 
-Build from CLI:
-
+# prepare export credentials
 $ cd ttwatcher/src
 $ cp strava_auth.h.orig strava_auth.h
 $ cp runkeeper_auth.h.orig runkeeper_auth.h
+```
+
+Build from CLI:
+
+```
 $ cd ..
 $ mkdir build && cd build
 $ qmake ../TTWatcherMain.pro 
@@ -112,6 +116,7 @@ $ make
 $ sudo make install
 $ sudo install -m 755 -p src/ttwatcher /usr/local/bin
 $ ttwatcher
+
 ```
 
 Build using GUI IDE:

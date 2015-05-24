@@ -77,7 +77,9 @@ Install Qt 5.x Framework and load up the TTWatcherMain.pro file in the src direc
 ## Windows
 You might have to copy the hid.lib to your Release or Debug output directory if you get linking errors.
 
-## Linux (Ubuntu 14.04)
+## Linux
+
+Tested on Ubuntu 14.04, 14.10 and 15.04.
 
 On Linux if your app does not run as root you'll need to have permission to access the hid device. The easiest way is this:
 ```
@@ -98,11 +100,30 @@ $ qmake -v
 QMake version 3.0
 Using Qt version 5.2.1 in /usr/lib/x86_64-linux-gnu
 
-$ cd ttwatcher
+# prepare export credentials
+$ cd ttwatcher/src
+$ cp strava_auth.h.orig strava_auth.h
+$ cp runkeeper_auth.h.orig runkeeper_auth.h
+```
+
+Build from CLI:
+
+```
+$ cd ..
 $ mkdir build && cd build
 $ qmake ../TTWatcherMain.pro 
 $ make
 $ sudo make install
 $ sudo install -m 755 -p src/ttwatcher /usr/local/bin
 $ ttwatcher
+
 ```
+
+Build using GUI IDE:
+
+```
+$ sudo apt-get install qtcreator
+$ qtcreator
+```
+Import project by opening the TTWatcherMain.pro file.
+

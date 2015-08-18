@@ -80,46 +80,16 @@ void DownloadDialog::process()
 
     foreach ( TTWatch * watch, m_TTManager->watches())
     {
-        QByteArray prefData;
 
-        /**********************************************/
-        /* 1. LOADING PREFERENCES */
-        /**********************************************/
+        /**/
 
-        emit workInfo(tr("Loading Preferences"), false);
-
-        if ( !watch->downloadPreferences(prefData) )
-        {
-            qCritical() << "MainWindow::onWatchesChanged / unable to load preferences file.";
-            workInfo(tr("Failed to load preferences"), true);
-            continue;
-        }
-
-
-        /*QFile tempf("tempf.xml");
-        tempf.open(QIODevice::WriteOnly);
-        tempf.write(prefData);
-        tempf.close();*/
-
-        WatchPreferencesPtr preferences = m_TTManager->preferences( watch->serial() );
-        if ( !preferences )
-        {
-            qCritical() << "MainWindow::onWatchesChanged / did not get a preferences ptr.";
-            continue;
-        }
-
-        if ( !preferences->parsePreferences( prefData ) )
-        {
-            qCritical() << "MainWindow::onWatchesChanged / failed to parse preferences.";
-            workInfo(tr("Failed to parse preferences"), true);
-            continue;
-        }
 
         if ( !m_Settings->autoDownload() )
         {
             continue;
         }
 
+        WatchExportersPtr exporters = m_TTManager->exporters( watch->serial());
 
         /**********************************************/
         /* 2. LOAD TTBINS */
@@ -127,7 +97,7 @@ void DownloadDialog::process()
 
         workInfo(tr("Downloading .ttbins"), false);
 
-        QStringList files = watch->download(Settings::ttdir() + QDir::separator() + preferences->name(), true);
+        QStringList files = watch->download(Settings::ttdir() + QDir::separator() + exporters->name(), true);
 
         if ( files.count() > 0 )
         {
@@ -141,7 +111,7 @@ void DownloadDialog::process()
             {
                 workInfo(tr("Exporting .ttbin . %1").arg(filename), false);
 
-                if ( !preferences->exportFile(filename) )
+                if ( !exporters->exportFile(filename) )
                 {
                     workInfo(tr("Exporting .ttbin failed. %1").arg(filename), false);
                 }
@@ -163,10 +133,6 @@ void DownloadDialog::process()
 
     }
 
-    /**********************************************/
-    /* 4. Save preferences data. */
-    /**********************************************/
-    m_TTManager->savePreferences();
 
     /**********************************************/
     /* 5. APPLY GPS QUICK FIX DATA */
@@ -221,8 +187,8 @@ void DownloadDialog::onFinished(QNetworkReply *reply)
 void DownloadDialog::onExportingFinished()
 {
     bool stillExporting = false;
-    PreferencesMap::iterator i = m_TTManager->preferences().begin();
-    for(;i!=m_TTManager->preferences().end();i++)
+    WatchExportersMap::iterator i = m_TTManager->exporters().begin();
+    for(;i!=m_TTManager->exporters().end();i++)
     {
         if ( i.value()->isExporting() )
         {

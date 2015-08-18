@@ -45,6 +45,9 @@ public:
 
     virtual bool nativeEventFilter(const QByteArray &eventType, void *message, long *l);
 private slots:
+
+    void exportActivity( const QString & exporterName );
+
     void onTileChanged();
 
 

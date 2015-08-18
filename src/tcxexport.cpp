@@ -49,19 +49,19 @@ void TCXExport::save(QIODevice *dev, ActivityPtr activity)
 
         foreach (TrackPointPtr tp, lap->points())
         {
-            if ( tp->latitude() == 0 && tp->longitude() == 0 )
-            {
-                continue;
-            }
 
             stream.writeStartElement("Trackpoint");
 
 
             stream.writeTextElement("Time", tp->time().toUTC().toString(Qt::ISODate));
-            stream.writeStartElement("Position");
-            stream.writeTextElement("LatitudeDegrees", QString::number(tp->latitude(),'f',9) );
-            stream.writeTextElement("LongitudeDegrees", QString::number(tp->longitude(),'f',9) );
-            stream.writeEndElement(); // Position.
+            if ( tp->latitude() != 0 || tp->longitude() != 0 )
+            {
+
+                stream.writeStartElement("Position");
+                stream.writeTextElement("LatitudeDegrees", QString::number(tp->latitude(),'f',9) );
+                stream.writeTextElement("LongitudeDegrees", QString::number(tp->longitude(),'f',9) );
+                stream.writeEndElement(); // Position.
+            }
 
             if ( tp->altitude() > 0.0 )
             {
@@ -97,7 +97,7 @@ void TCXExport::save(QIODevice *dev, ActivityPtr activity)
                     }
                     if ( cadence.count() > 10 )
                     {
-                        stream.writeTextElement("Cadence", QString::number( (int)(60.0 * dc / cadence.count()) ));
+                        stream.writeTextElement("Cadence", QString::number( (int)(0.5 * 60.0 * dc / cadence.count()) ));
                     }
                 }
 

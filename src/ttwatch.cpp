@@ -29,7 +29,7 @@
 #define TT_GET_VERSION          0x21 // responds with 01 08 07 21 31 2E 38 2E 32 35 radix: ascii: ...!1.8.25
 
 #define TT_GET_BATTERY_LEVEL    0x23
-#define TT_UNKNOWN_1D           0x1d
+#define TT_RESET_GPS_PROCESSOR  0x1d
 
 
 /* File 00010100 contains GPS Quickfix data.
@@ -469,8 +469,15 @@ bool TTWatch::downloadPreferences(QByteArray &data)
 
     if ( readFile(data, FILE_PREFERENCES_XML, true ) )
     {
+        QFile tempf("tempf_" + m_Serial + ".xml");
+        tempf.open(QIODevice::WriteOnly);
+        tempf.write(data);
+        tempf.close();
+
         return true;
     }
+
+
 
     return false;
 }
@@ -490,7 +497,7 @@ bool TTWatch::postGPSFix()
     }
 
     QByteArray postGPS, response;
-    postGPS.append((char)TT_UNKNOWN_1D);
+    postGPS.append((char)TT_RESET_GPS_PROCESSOR);
     return sendCommand(postGPS, response);
 }
 

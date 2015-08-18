@@ -1,5 +1,5 @@
 #include "runkeeperexporter.h"
-#include "watchpreferences.h"
+#include "watchexporters.h"
 
 #include <QJsonDocument>
 #include <QJsonArray>
@@ -22,11 +22,10 @@
 #define AUTH_REQUEST    3
 
 
-RunKeeperExporter::RunKeeperExporter(QObject *parent) :
+RunKeeperExporter::RunKeeperExporter(const QString &serial, QObject *parent) :
     IActivityExporter(parent),
-    m_Enabled(false),
-    m_AutoOpen(false),
-    m_Icon( QIcon(":/icons/runkeeper.png") )
+    m_Icon( QIcon(":/icons/runkeeper.png") ),
+    m_Config(serial)
 {
     connect(&m_Manager, SIGNAL(finished(QNetworkReply*)), this, SLOT(onRequestFinished(QNetworkReply*)));
 #ifdef USE_DEBUG_PROXY
@@ -43,56 +42,9 @@ QString RunKeeperExporter::name() const
     return "RunKeeper";
 }
 
-bool RunKeeperExporter::loadConfig(const WatchPreferences &preferences, QDomElement element)
-{
-    parseExportTag(element, "RunKeeper", m_Enabled, m_AutoOpen);
-
-    QDomElement token = element.firstChildElement("AuthToken");
-    if ( !token.isNull() )
-    {
-        m_AuthToken = preferences.decodeToken( token.text() );
-    }
-    setChanged(false);
-
-    return true;
-}
-
-bool RunKeeperExporter::isEnabled() const
-{
-    return m_Enabled;
-}
-
-void RunKeeperExporter::setEnabled(bool enabled)
-{
-    m_Enabled = enabled;
-}
-
-bool RunKeeperExporter::isOnline() const
-{
-    return true;
-}
-
-bool RunKeeperExporter::autoOpen() const
-{
-    return m_AutoOpen;
-}
-
-void RunKeeperExporter::setAutoOpen(bool autoOpen)
-{
-    m_AutoOpen = autoOpen;
-}
-
 QIcon RunKeeperExporter::icon() const
 {
     return m_Icon;
-}
-
-void RunKeeperExporter::reset()
-{
-    m_AutoOpen = false;
-    m_Enabled = false;
-    m_AuthToken.clear();
-    setChanged(false);
 }
 
 bool RunKeeperExporter::hasSetup() const
@@ -151,25 +103,14 @@ void RunKeeperExporter::setup(QWidget *parent)
     server->unregisterCallback(cburl.path());
 }
 
-void RunKeeperExporter::saveConfig(const WatchPreferences &preferences, QDomDocument &document, QDomElement &element)
+IExporterConfig &RunKeeperExporter::config()
 {
-    writeExportTag(document, element, "RunKeeper", m_Enabled, m_AutoOpen);
+    return m_Config;
+}
 
-    QDomElement oldAuthToken = element.firstChildElement("AuthToken");
-    if ( !oldAuthToken.isNull() )
-    {
-        element.removeChild(oldAuthToken);
-    }
-
-
-    if ( m_AuthToken.length() > 0 )
-    {
-        QDomElement e = document.createElement("AuthToken");
-        QDomText text = document.createTextNode(preferences.encodeToken( m_AuthToken ));
-        element.appendChild(e);
-        e.appendChild(text);
-    }
-    setChanged(false);
+IExporterConfig * RunKeeperExporter::createConfig()
+{
+    return new RunKeeperExporterConfig( m_Config.serial() );
 }
 
 void RunKeeperExporter::exportActivity(ActivityPtr activity)
@@ -271,7 +212,7 @@ void RunKeeperExporter::exportActivity(ActivityPtr activity)
 
 
     QNetworkRequest r( QUrl("http://api.runkeeper.com/fitnessActivities"));
-    r.setRawHeader("Authorization", "Bearer " + m_AuthToken);
+    r.setRawHeader("Authorization", "Bearer " + m_Config.authToken());
     r.setHeader(QNetworkRequest::ContentTypeHeader, "application/vnd.com.runkeeper.NewFitnessActivity+json");
 
     QNetworkReply * reply = m_Manager.post(r, data);
@@ -306,7 +247,7 @@ void RunKeeperExporter::onActivityPosted(QNetworkReply *reply)
 
     if ( reply->error() != QNetworkReply::NoError )
     {
-        emit exportFinished(false, tr("Failed to export to RunKeeper"), QUrl());
+        emit exportFinished(false, tr("Runkeeper: Failed to export"), QUrl());
         return;
     }
 
@@ -317,7 +258,7 @@ void RunKeeperExporter::onActivityPosted(QNetworkReply *reply)
 
     QNetworkRequest r( QUrl("http://api.runkeeper.com/profile"));
     r.setHeader(QNetworkRequest::ContentTypeHeader, "application/vnd.com.runkeeper.Profile+json");
-    r.setRawHeader("Authorization", "Bearer " + m_AuthToken);
+    r.setRawHeader("Authorization", "Bearer " + m_Config.authToken());
     QNetworkReply * reply2 = m_Manager.get(r);
     reply2->setProperty("REQUEST", GET_USER_URI);
     reply2->setProperty("LOCATION", location);
@@ -327,7 +268,7 @@ void RunKeeperExporter::onGetUserId(QNetworkReply *reply)
 {
     if ( reply->error() != QNetworkReply::NoError)
     {
-        emit exportFinished(false, tr("Failed to export to RunKeeper (2)"), QUrl());
+        emit exportFinished(false, tr("Runkeeper: Failed to export (2)"), QUrl());
         return;
     }
 
@@ -338,8 +279,8 @@ void RunKeeperExporter::onGetUserId(QNetworkReply *reply)
     if ( o.contains("profile"))
     {
         QString profile = o["profile"].toString();
-        emit exportFinished(true, tr("Exported to RunKeep"), QUrl( profile + location ));
-        if ( m_AutoOpen )
+        emit exportFinished(true, tr("Runkeeper: Exported Done."), QUrl( profile + location ));
+        if ( m_Config.isAutoOpen() )
         {
             QDesktopServices::openUrl(QUrl( profile + "/activity/" + location ));
         }
@@ -355,6 +296,7 @@ void RunKeeperExporter::onAuthRequest(QNetworkReply *reply)
 
     if ( httpCode != 200 )
     {
+        m_Config.setAuthToken("");
         emit setupFinished(this, false);
         return;
     }
@@ -362,12 +304,12 @@ void RunKeeperExporter::onAuthRequest(QNetworkReply *reply)
     QJsonObject response = d.object();
     if ( response.contains("access_token"))
     {
-        m_AuthToken = response["access_token"].toString().toUtf8();
-        setChanged(true);
+        m_Config.setAuthToken( response["access_token"].toString().toUtf8() );
         emit setupFinished(this, true);
     }
     else
     {
+        m_Config.setAuthToken("");
         emit setupFinished(this, false);
     }
 }

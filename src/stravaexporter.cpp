@@ -1,5 +1,5 @@
 #include "stravaexporter.h"
-#include "watchpreferences.h"
+#include "watchexporters.h"
 #include "tcxexport.h"
 #include <QNetworkRequest>
 #include <QNetworkReply>
@@ -16,18 +16,16 @@
 
 #include "httpserver.h"
 #include "singleshot.h"
-
 #include "strava_auth.h"
 
 #define AUTH_REQUEST    1
 #define ACTIVITY_SUBMIT 2
 #define ACTIVITY_STATUS 3
 
-StravaExporter::StravaExporter(QObject *parent) :
+StravaExporter::StravaExporter(const QString &serial, QObject *parent) :
     IActivityExporter(parent),
-    m_Enabled(false),
-    m_AutoOpen(false),
-    m_Icon( ":/icons/strava.png")
+    m_Icon( ":/icons/strava.png"),
+    m_Config(serial)
 {
 
     connect(&m_Manager, SIGNAL(finished(QNetworkReply*)), this, SLOT(requestFinished(QNetworkReply*)));
@@ -45,64 +43,9 @@ QString StravaExporter::name() const
     return "Strava";
 }
 
-bool StravaExporter::loadConfig(const WatchPreferences & preferences, QDomElement element)
-{
-    parseExportTag(element, "Strava", m_Enabled, m_AutoOpen);
-
-    QDomElement token = element.firstChildElement("StravaAuthToken");
-    if ( !token.isNull() )
-    {
-        m_AuthToken = preferences.decodeToken( token.text() );
-    }
-    setChanged(false);
-
-    return true;
-}
-
-bool StravaExporter::isEnabled() const
-{
-    return m_Enabled;
-}
-
-void StravaExporter::setEnabled(bool enabled)
-{
-    if ( m_Enabled != enabled )
-    {
-        m_Enabled = enabled;
-        setChanged(true);
-    }
-}
-
-bool StravaExporter::isOnline() const
-{
-    return true;
-}
-
-bool StravaExporter::autoOpen() const
-{
-    return m_AutoOpen;
-}
-
-void StravaExporter::setAutoOpen(bool autoOpen)
-{
-    if ( m_AutoOpen != autoOpen )
-    {
-        m_AutoOpen = autoOpen;
-        setChanged(true);
-    }
-}
-
 QIcon StravaExporter::icon() const
 {
     return m_Icon;
-}
-
-void StravaExporter::reset()
-{
-    m_Enabled = false;
-    m_AutoOpen = false;
-    m_AuthToken = "";
-    setChanged(false);
 }
 
 bool StravaExporter::hasSetup() const
@@ -158,11 +101,22 @@ void StravaExporter::setup(QWidget *parent)
     server->unregisterCallback(cburl.path());
 }
 
+IExporterConfig &StravaExporter::config()
+{
+    return m_Config;
+}
+
+IExporterConfig * StravaExporter::createConfig()
+{
+    return new StravaExporterConfig( m_Config.serial() );
+}
+
 
 void StravaExporter::authCodeAnswer(QJsonDocument &d, int httpCode)
 {
     if ( httpCode != 200 )
     {
+        m_Config.setAuthToken("");
         emit setupFinished(this, false);
         return;
     }
@@ -170,38 +124,18 @@ void StravaExporter::authCodeAnswer(QJsonDocument &d, int httpCode)
     QJsonObject response = d.object();
     if ( response.contains("access_token"))
     {
-        m_AuthToken = response["access_token"].toString().toUtf8();
-        setChanged(true);
+        m_Config.setAuthToken( response["access_token"].toString().toUtf8() );
         emit setupFinished(this, true);
     }
     else
     {
+        m_Config.setAuthToken("");
         emit setupFinished(this, false);
     }
 }
 
 
-void StravaExporter::saveConfig(const WatchPreferences & preferences, QDomDocument &document, QDomElement &element)
-{
 
-    writeExportTag(document, element, "Strava", m_Enabled, m_AutoOpen);
-
-    QDomElement oldAuthToken = element.firstChildElement("StravaAuthToken");
-    if ( !oldAuthToken.isNull() )
-    {
-        element.removeChild(oldAuthToken);
-    }
-
-
-    if ( m_AuthToken.length() > 0 )
-    {
-        QDomElement e = document.createElement("StravaAuthToken");
-        QDomText text = document.createTextNode(preferences.encodeToken( m_AuthToken ));
-        element.appendChild(e);
-        e.appendChild(text);
-    }
-    setChanged(false);
-}
 
 void StravaExporter::exportActivity(ActivityPtr activity)
 {
@@ -213,7 +147,7 @@ void StravaExporter::exportActivity(ActivityPtr activity)
     QNetworkRequest r;
     r.setUrl(QUrl("https://www.strava.com/api/v3/uploads"));
     QByteArray bearer("Bearer ");
-    bearer.append(m_AuthToken);
+    bearer.append(m_Config.authToken());
     r.setRawHeader("Authorization", bearer);
 
     QHttpMultiPart *multiPart = new QHttpMultiPart(QHttpMultiPart::FormDataType);
@@ -269,7 +203,7 @@ void StravaExporter::activitySubmitted(QJsonDocument &d, int httpCode)
 {
     if ( httpCode == 401 )
     {
-        emit exportFinished(false, tr("Your account has been de-authorized."), QUrl());
+        emit exportFinished(false, tr("Strava: Your account has been de-authorized."), QUrl());
         return;
     }
 
@@ -284,8 +218,8 @@ void StravaExporter::activitySubmitted(QJsonDocument &d, int httpCode)
             int pos = error.lastIndexOf(" ");
             error = error.mid(pos+1);
             QUrl u(QString("https://www.strava.com/activities/%1").arg(error));
-            emit exportFinished(true, tr("Duplicate"), u);
-            if ( m_AutoOpen )
+            emit exportFinished(true, tr("Strava: Duplicate Upload."), u);
+            if ( m_Config.isAutoOpen() )
             {
                 QDesktopServices::openUrl(u);
             }
@@ -301,8 +235,8 @@ void StravaExporter::activitySubmitted(QJsonDocument &d, int httpCode)
     if ( o.contains("activity_id") && !o["activity_id"].isNull() )
     {
         QUrl u(QString("https://www.strava.com/activities/%1").arg(o["activity_id"].toInt()));
-        emit exportFinished(true, tr("Export Successful"), u);
-        if ( m_AutoOpen )
+        emit exportFinished(true, tr("Strava: Export Successful"), u);
+        if ( m_Config.isAutoOpen() )
         {
             QDesktopServices::openUrl(u);
         }
@@ -318,7 +252,7 @@ void StravaExporter::activitySubmitted(QJsonDocument &d, int httpCode)
     }
     else
     {
-        emit exportFinished(false, tr("Response Error"), QUrl());
+        emit exportFinished(false, tr("Strava: Response Error"), QUrl());
     }
 }
 
@@ -327,7 +261,7 @@ void StravaExporter::getActivityStatus(int uploadId, int retry)
     QNetworkRequest r;
     r.setUrl(QUrl( QString("https://www.strava.com/api/v3/uploads/%1").arg(uploadId)));
     QByteArray bearer("Bearer ");
-    bearer.append(m_AuthToken);
+    bearer.append( m_Config.authToken() );
     r.setRawHeader("Authorization", bearer);
 
     QNetworkReply * reply = m_Manager.get( r );
@@ -341,7 +275,7 @@ void StravaExporter::activityStatus(QJsonDocument &d, int httpCode, QNetworkRepl
 {
     if ( httpCode == 404 )
     {
-        emit exportFinished(false, tr("Not Found"), QUrl());
+        emit exportFinished(false, tr("Strava: Not Found"), QUrl());
         return;
     }
 
@@ -351,8 +285,8 @@ void StravaExporter::activityStatus(QJsonDocument &d, int httpCode, QNetworkRepl
     if ( response.contains("activity_id") && !response["activity_id"].isNull() )
     {
         QUrl u(QString("https://www.strava.com/activities/%1").arg( response["activity_id"].toInt() ));
-        emit exportFinished(true, tr("Upload done"), u);
-        if ( m_AutoOpen )
+        emit exportFinished(true, tr("Strava: Upload done"), u);
+        if ( m_Config.isAutoOpen() )
         {
             QDesktopServices::openUrl(u);
         }

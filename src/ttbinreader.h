@@ -13,18 +13,22 @@ class TTBinReader
     qint32 m_UTCOffset;
     quint16 readquint16( quint8 * data, int pos );
     quint32 readquint32( quint8 * data, int pos );
-    qint32 readqint32( quint8 * data, int pos );
+    qint16 readqint16(quint8 *data, int pos);
+    qint32 readqint32( quint8 * data, int pos );      
     QDateTime readTime(quint8 * data, int pos , bool inUTC);
     float readFloat( quint8 * data, int pos );
 
     bool readData( QIODevice & ttbin, quint8 tag, int expectedSize, QByteArray & dest );
     bool readHeader( QIODevice & ttbin, ActivityPtr activity );
-    bool readLap( QIODevice & ttbin, ActivityPtr activity );
+    bool readStatus( QIODevice & ttbin, ActivityPtr activity );
+    bool readLap(QIODevice & ttbin, ActivityPtr activity );
     bool readHeartRate( QIODevice & ttbin, ActivityPtr activity );
     bool readPosition( QIODevice & ttbin, ActivityPtr activity, bool forgiving );
     bool readSummary( QIODevice & ttbin, ActivityPtr activity );
     bool readTreadmill( QIODevice & ttbin, ActivityPtr activity );
     bool readSwim( QIODevice & ttbin, ActivityPtr activity );
+    bool readAltitude( QIODevice & ttbin, ActivityPtr activity );
+    bool readRecovery(QIODevice &ttbin, ActivityPtr activity);
 
     bool skipTag( QIODevice & ttbin, quint8 tag, int size );
 
@@ -32,6 +36,9 @@ public:
     TTBinReader();
 
     ActivityPtr read( QIODevice & ttbin, bool forgiving = false );
+private:
+
+
 };
 
 int process(const QString &filename);

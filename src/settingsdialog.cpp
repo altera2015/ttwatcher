@@ -10,8 +10,8 @@ SettingsDialog::SettingsDialog(Settings *settings, TTManager * ttManager, QWidge
     ui->setupUi(this);
     display();
 
-    connect(ttManager, SIGNAL(ttArrived()), this, SLOT(display()));
-    connect(ttManager, SIGNAL(ttRemoved()), this, SLOT(display()));
+    connect(ttManager, SIGNAL(ttArrived(QString)), this, SLOT(display()));
+    connect(ttManager, SIGNAL(ttRemoved(QString)), this, SLOT(display()));
 
     connect(ui->enabledChecked, SIGNAL(clicked()), this, SLOT(onExporterChanged()));
     connect(ui->autoOpenCheckBox, SIGNAL(clicked()), this, SLOT(onExporterChanged()));
@@ -21,10 +21,10 @@ SettingsDialog::SettingsDialog(Settings *settings, TTManager * ttManager, QWidge
 
     ui->okButton->setEnabled(false);
 
-    PreferencesMap::iterator i = m_TTManager->preferences().begin();
-    for(;i!=m_TTManager->preferences().end();i++)
+    WatchExportersMap::iterator i = m_TTManager->exporters().begin();
+    for(;i!=m_TTManager->exporters().end();i++)
     {
-        WatchPreferencesPtr wp = i.value();
+        WatchExportersPtr wp = i.value();
         foreach( IActivityExporterPtr exp, wp->exporters())
         {
             connect(exp.data(), SIGNAL(setupFinished(IActivityExporter *,bool)), this, SLOT(onSetupFinished(IActivityExporter*,bool)));
@@ -42,14 +42,14 @@ SettingsDialog::~SettingsDialog()
 void SettingsDialog::display()
 {
     ui->watchBox->clear();
-    WatchPreferencesPtr defPref = m_TTManager->defaultPreferences();
+    WatchExportersPtr defPref = m_TTManager->defaultExporters();
 
     int index = 0;
     int selectIndex = -1;
-    PreferencesMap::iterator i = m_TTManager->preferences().begin();
-    for(;i!=m_TTManager->preferences().end();i++)
+    WatchExportersMap::iterator i = m_TTManager->exporters().begin();
+    for(;i!=m_TTManager->exporters().end();i++)
     {
-        WatchPreferencesPtr p = i.value();
+        WatchExportersPtr p = i.value();
 
         // only allow preferences to be changed for a watch that is connected.
 
@@ -91,15 +91,15 @@ void SettingsDialog::displayWatchPreferences()
         return;
     }
 
-    ui->enabledChecked->setChecked( exp->isEnabled() );
-    ui->autoOpenCheckBox->setChecked( exp->autoOpen() );
+    ui->enabledChecked->setChecked( exp->config().isValid() );
+    ui->autoOpenCheckBox->setChecked( exp->config().isAutoOpen() );
     ui->setupButton->setEnabled( exp->hasSetup() );
 }
 
 IActivityExporterPtr SettingsDialog::currentExporter()
 {
     QString serial = ui->watchBox->currentData().toString();
-    WatchPreferencesPtr pref = m_TTManager->preferences(serial);
+    WatchExportersPtr pref = m_TTManager->exporters(serial);
 
     if ( !ui->exporterList->currentItem() )
     {
@@ -144,8 +144,8 @@ void SettingsDialog::onExporterChanged()
         return;
     }
 
-    exp->setEnabled( ui->enabledChecked->isChecked() );
-    exp->setAutoOpen( ui->autoOpenCheckBox->isChecked() );
+    exp->config().setValid( ui->enabledChecked->isChecked() );
+    exp->config().setAutoOpen( ui->autoOpenCheckBox->isChecked() );
     ui->okButton->setEnabled(true);
 }
 
@@ -179,14 +179,14 @@ void SettingsDialog::on_okButton_clicked()
 
 void SettingsDialog::on_SettingsDialog_accepted()
 {
-    m_TTManager->savePreferences();
+    m_TTManager->saveAllConfig(true);
     m_Settings->save();
     ui->okButton->setEnabled(false);
 }
 
 void SettingsDialog::on_SettingsDialog_rejected()
 {
-    m_TTManager->loadPreferences();
+    m_TTManager->loadAllConfig();
     m_Settings->load();
     ui->okButton->setEnabled(false);
 }

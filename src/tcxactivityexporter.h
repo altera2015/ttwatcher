@@ -2,32 +2,26 @@
 #define TCXACTIVITYEXPORTER_H
 
 #include "iactivityexporter.h"
+#include "tcxexporterconfig.h"
 
 class TCXActivityExporter : public IActivityExporter
 {
     Q_OBJECT
 public:
-    explicit TCXActivityExporter(QObject *parent = 0);
+    explicit TCXActivityExporter(const QString & serial, QObject *parent = 0);
 
     virtual QString name() const;
-    virtual bool loadConfig( const WatchPreferences & preferences, QDomElement element );
-    virtual bool isEnabled() const;
-    virtual void setEnabled(bool enabled);
-    virtual bool isOnline() const;
-    virtual bool autoOpen() const;
-    virtual void setAutoOpen( bool autoOpen );
     virtual QIcon icon() const;
-    virtual void reset();
     virtual bool hasSetup() const;
     virtual void setup( QWidget * parent );
-    virtual void saveConfig( const WatchPreferences & preferences, QDomDocument & document, QDomElement & element );
+    virtual IExporterConfig & config();
+    IExporterConfig *createConfig();
 
 public slots:
     virtual void exportActivity( ActivityPtr activity );
 private:
-    bool m_Enabled;
-    bool m_AutoOpen;
     QIcon m_Icon;
+    TCXExporterConfig m_Config;
 };
 typedef QSharedPointer<TCXActivityExporter>TCXActivityExporterPtr;
 

@@ -12,8 +12,10 @@
 #include <QJsonArray>
 #include <QJsonObject>
 #include <QAbstractEventDispatcher>
+#include <QMenu>
 
 
+#include "exportworkingdialog.h"
 #include "flatfileiconprovider.h"
 #include "ttbinreader.h"
 #include "tcxexport.h"
@@ -271,6 +273,7 @@ void MainWindow::onElevationLoaded(bool success, ActivityPtr activity)
 
 
 
+    /*
     QFile of(m_Activity->filename() + ".tcx");
     if (!of.open(QIODevice::WriteOnly))
     {
@@ -281,7 +284,7 @@ void MainWindow::onElevationLoaded(bool success, ActivityPtr activity)
 
     TCXExport e;
     e.save(&of, m_Activity);
-    of.close();
+    of.close();*/
 }
 
 
@@ -382,7 +385,7 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->actionShow_Speed->setChecked(true);
 
     connect(ui->graph, SIGNAL(mouseMove(QMouseEvent*)), this, SLOT(onGraphMouseMove(QMouseEvent*)));
-    connect(&m_TTManager, SIGNAL(ttArrived()), this, SLOT(onWatchArrived()));
+    connect(&m_TTManager, SIGNAL(ttArrived(QString)), this, SLOT(onWatchArrived()));
     connect(&m_ElevationLoader, SIGNAL(loaded(bool,ActivityPtr)), this, SLOT(onElevationLoaded(bool,ActivityPtr)));
     connect(&m_WatchTimer, SIGNAL(timeout()), this, SLOT(onWatchArrivedDelay()));
     m_WatchTimer.setSingleShot(true);
@@ -478,6 +481,20 @@ MainWindow::MainWindow(QWidget *parent) :
         qDebug() << "MainWindow::MainWindow / Could not RegisterDeviceNotification.";
     }
 #endif
+
+
+    ui->treeView->setContextMenuPolicy(Qt::ActionsContextMenu);
+    WatchExportersPtr watchExporters = m_TTManager.defaultExporters();
+    IActivityExporterList exporters = watchExporters->exporters();
+    foreach ( IActivityExporterPtr ae, exporters )
+    {
+        QAction * action = new QAction(ae->icon(), ae->name(), ui->treeView);
+        connect(action, &QAction::triggered, [this, ae]() {
+            exportActivity( ae->name());
+        });
+        ui->treeView->addAction(action);
+    }
+
 }
 
 void MainWindow::onTileChanged()
@@ -520,6 +537,59 @@ bool MainWindow::nativeEventFilter(const QByteArray &eventType, void *message, l
     return false;
 
 #endif
+}
+
+
+void MainWindow::exportActivity(const QString &exporterName)
+{
+    if ( !m_Activity)
+    {
+        return;
+    }
+
+
+
+
+    QString filename = m_Activity->filename();
+
+    QFileInfo fi(filename);
+    QDir fileDir = fi.absoluteDir();
+    QString path = QDir::cleanPath(fileDir.path());
+    path = QDir::toNativeSeparators(path);
+    QStringList parts = path.split( QDir::separator() );
+
+    WatchExportersPtr prefs;
+
+    for (int i=parts.count()-1;i>=0;i--)
+    {
+        prefs = m_TTManager.exportersForName( parts[i] );
+        if ( prefs )
+        {
+            break;
+        }
+    }
+
+    if ( !prefs )
+    {
+        prefs = m_TTManager.defaultExporters();
+    }
+
+    if ( prefs )
+    {
+        ExportWorkingDialog ewd(m_Activity, prefs, exporterName, this);
+        ewd.exec();
+
+
+
+        /* if ( !prefs->exportActivity(m_Activity, exporterName) )
+        {
+            QMessageBox::warning(this, tr("Warning"), tr("Exporting to %1 has not yet been setup, please go to the settings and configure it first.").arg(exporterName));
+        }*/
+    }
+    else
+    {
+        ui->statusBar->showMessage(tr("Could not find an exporter object."));
+    }
 }
 
 
@@ -703,44 +773,8 @@ void MainWindow::on_actionGo_to_website_triggered()
  * 2. If not watch use default preferences object.
  */
 void MainWindow::on_actionExport_Activity_triggered()
-{
-    if ( !m_Activity)
-    {
-        return;
-    }
-
-    QString filename = m_Activity->filename();
-
-    QFileInfo fi(filename);
-    QDir fileDir = fi.absoluteDir();
-    QString path = QDir::cleanPath(fileDir.path());
-    path = QDir::toNativeSeparators(path);
-    QStringList parts = path.split( QDir::separator() );
-
-    WatchPreferencesPtr prefs;
-
-    for (int i=parts.count()-1;i>=0;i--)
-    {
-        prefs = m_TTManager.preferencesForName( parts[i] );
-        if ( prefs )
-        {
-            break;
-        }
-    }
-
-    if ( !prefs )
-    {
-        prefs = m_TTManager.defaultPreferences();
-    }
-
-    if ( prefs )
-    {
-        prefs->exportActivity(m_Activity);
-    }
-    else
-    {
-        ui->statusBar->showMessage(tr("Could not find an exporter object."));
-    }
+{    
+    exportActivity("");
 }
 
 void MainWindow::on_actionSettings_triggered()

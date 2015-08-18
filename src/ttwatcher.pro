@@ -8,6 +8,7 @@ win32:RC_FILE = ttwatcher.rc
 linux:CONFIG += c++11
 linux:LIBS +=-lusb-1.0
 
+DEFINES+=USE_DEBUG_PROXY
 DEFINES+=Q_HTTP_STATIC_BUILD
 
 SOURCES += main.cpp\
@@ -24,7 +25,6 @@ SOURCES += main.cpp\
     tcxexport.cpp \
     qcustomplot.cpp \
     elevationloader.cpp \
-    watchpreferences.cpp \
     iactivityexporter.cpp \
     stravaexporter.cpp \
     httpserver.cpp \
@@ -36,7 +36,15 @@ SOURCES += main.cpp\
     settings.cpp \
     aboutdialog.cpp \
     downloaddialog.cpp \
-    runkeeperexporter.cpp
+    runkeeperexporter.cpp \
+    smashrunexporter.cpp \
+    iexporterconfig.cpp \
+    stravaexporterconfig.cpp \
+    tcxexporterconfig.cpp \
+    runkeeperexporterconfig.cpp \
+    smashrunexporterconfig.cpp \
+    watchexporters.cpp \
+    exportworkingdialog.cpp
 
 win32:SOURCES+=hid.c
 unix:linux:SOURCES+=hidlinux.c
@@ -58,7 +66,6 @@ HEADERS  += mainwindow.h \
     qcustomplot.h \
     elevationloader.h \
     version.h \
-    watchpreferences.h \
     iactivityexporter.h \
     stravaexporter.h \
     httpserver.h \
@@ -71,12 +78,21 @@ HEADERS  += mainwindow.h \
     settings.h \
     aboutdialog.h \
     downloaddialog.h \
-    runkeeperexporter.h
+    runkeeperexporter.h \
+    smashrunexporter.h \
+    iexporterconfig.h \
+    stravaexporterconfig.h \
+    tcxexporterconfig.h \
+    runkeeperexporterconfig.h \
+    smashrunexporterconfig.h \
+    watchexporters.h \
+    exportworkingdialog.h
 
 FORMS    += mainwindow.ui \
     settingsdialog.ui \
     aboutdialog.ui \
-    downloaddialog.ui
+    downloaddialog.ui \
+    exportworkingdialog.ui
 
 RESOURCES += \
     resources.qrc
@@ -93,3 +109,6 @@ else:win32-g++:CONFIG(debug, debug|release): PRE_TARGETDEPS += $$OUT_PWD/../qhtt
 else:win32:!win32-g++:CONFIG(release, debug|release): PRE_TARGETDEPS += $$OUT_PWD/../qhttpserver/src/release/qhttpserver.lib
 else:win32:!win32-g++:CONFIG(debug, debug|release): PRE_TARGETDEPS += $$OUT_PWD/../qhttpserver/src/debug/qhttpserver.lib
 else:unix:PRE_TARGETDEPS += $$OUT_PWD/../qhttpserver/src/libqhttpserver.a
+
+OTHER_FILES += \
+    smashrun.html

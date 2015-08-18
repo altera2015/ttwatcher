@@ -11,11 +11,58 @@
 #include <QFile>
 #include "order32.h"
 
+
+#define TAG_FILE_HEADER         (0x20) // OK
+#define TAG_STATUS              (0x21) // OK
+#define TAG_GPS                 (0x22) // OK
+#define TAG_HEART_RATE          (0x25) // OK
+#define TAG_SUMMARY             (0x27) // OK
+#define TAG_POOL_SIZE           (0x2a)
+#define TAG_WHEEL_SIZE          (0x2b)
+#define TAG_TRAINING_SETUP      (0x2d)
+#define TAG_LAP                 (0x2f)
+#define TAG_TREADMILL           (0x32)  // OK
+#define TAG_SWIM                (0x34)  // OK
+#define TAG_GOAL_PROGRESS       (0x35)
+#define TAG_INTERVAL_SETUP      (0x39)
+#define TAG_INTERVAL_START      (0x3a)
+#define TAG_INTERVAL_FINISH     (0x3b)
+#define TAG_RACE_SETUP          (0x3c)
+#define TAG_RACE_RESULT         (0x3d)
+#define TAG_ALTITUDE_UPDATE     (0x3e)  // OK
+#define TAG_HEART_RATE_RECOVERY (0x3f)  // OK
+
+// Activities:
+#define TT_ACTIVITY_RUN         0
+#define TT_ACTIVITY_CYCLE       1
+#define TT_ACTIVITY_SWIM        2
+#define TT_ACTIVITY_STOPWATCH   6
+#define TT_ACTIVITY_TREADMILL   7
+#define TT_ACTIVITY_FREESTYLE   8
+
 quint16 TTBinReader::readquint16(quint8 *data, int pos)
 {
     quint16 d = (data[ pos + 0 ] ) |
             (data[ pos + 1 ] << 8 );
     return d;
+}
+
+qint16 TTBinReader::readqint16(quint8 *data, int pos)
+{
+    qint16 v;
+    quint8 * d = (quint8*)&v;
+
+    if ( O32_HOST_ORDER == O32_LITTLE_ENDIAN )
+    {
+        d[0] = data[0 + pos ];
+        d[1] = data[1 + pos ];
+    }
+    else
+    {
+        d[1] = data[0 + pos ];
+        d[0] = data[1 + pos ];
+    }
+    return v;
 }
 
 quint32 TTBinReader::readquint32(quint8 *data, int pos)
@@ -46,7 +93,6 @@ qint32 TTBinReader::readqint32(quint8 *data, int pos)
         d[1] = data[2 + pos ];
         d[0] = data[3 + pos ];
     }
-
     return v;
 }
 
@@ -181,24 +227,39 @@ bool TTBinReader::readData(QIODevice &ttbin, quint8 tag, int expectedSize, QByte
     return true;
 }
 
-bool TTBinReader::readLap(QIODevice &ttbin, ActivityPtr activity)
+bool TTBinReader::readStatus(QIODevice &ttbin, ActivityPtr activity)
 {
+
     /*
-    typedef struct {
-      quint8 lap;
-      quint8 activity;
-      quint32 time since start.
-    } Lap2;*/
+        uint8_t  status;        // 0 = ready, 1 = active, 2 = paused, 3 = stopped
+        uint8_t  activity;      // 0 = running, 1 = cycling, 2 = swimming, 7 = treadmill, 8 = freestyle
+        uint32_t timestamp;     // local time
+    */
 
 
     QByteArray buffer;
-    if ( !readData(ttbin, 0x21, 0x06, buffer))
+    if ( !readData(ttbin, TAG_STATUS, 0x06, buffer))
     {
         return false;
     }
-    //quint8 * data = (quint8*)buffer.data();
 
-    //activity->setDate( readTime(data, 2) );
+    return true;
+
+}
+
+bool TTBinReader::readLap(QIODevice &ttbin, ActivityPtr activity)
+{
+    /*
+        uint32_t total_time;        // seconds since activity start
+        float    total_distance;    // metres
+        uint16_t total_calories;
+    */
+
+    QByteArray buffer;
+    if ( !readData(ttbin, TAG_LAP, 0x0A, buffer))
+    {
+        return false;
+    }
 
     LapList & ll = activity->laps();
     if ( ll.count() == 0 )
@@ -214,7 +275,6 @@ bool TTBinReader::readLap(QIODevice &ttbin, ActivityPtr activity)
     }
 
     return true;
-
 }
 
 bool TTBinReader::readHeartRate(QIODevice &ttbin, ActivityPtr activity)
@@ -230,7 +290,7 @@ bool TTBinReader::readHeartRate(QIODevice &ttbin, ActivityPtr activity)
     } HeartRate;*/
 
     QByteArray buffer;
-    if ( !readData(ttbin, 0x25, 0x06, buffer))
+    if ( !readData(ttbin, TAG_HEART_RATE, 0x06, buffer))
     {
         return false;
     }
@@ -267,7 +327,7 @@ bool TTBinReader::readPosition(QIODevice &ttbin, ActivityPtr activity, bool forg
     } GPS;*/
 
     QByteArray buffer;
-    if ( !readData(ttbin, 0x22, 0x1b, buffer))
+    if ( !readData(ttbin, TAG_GPS, 0x1b, buffer))
     {
         return false;
     }
@@ -310,11 +370,7 @@ bool TTBinReader::readPosition(QIODevice &ttbin, ActivityPtr activity, bool forg
     return true;
 }
 
-// Activities:
-#define TT_ACTIVITY_RUN         0
-#define TT_ACTIVITY_CYCLE       1
-#define TT_ACTIVITY_SWIM        2
-#define TT_ACTIVITY_TREADMILL   7
+
 
 bool TTBinReader::readSummary(QIODevice &ttbin, ActivityPtr activity)
 {
@@ -328,7 +384,7 @@ bool TTBinReader::readSummary(QIODevice &ttbin, ActivityPtr activity)
 
 
     QByteArray buffer;
-    if ( !readData(ttbin, 0x27, 0x0b, buffer))
+    if ( !readData(ttbin, TAG_SUMMARY, 0x0b, buffer))
     {
         return false;
     }
@@ -348,6 +404,13 @@ bool TTBinReader::readSummary(QIODevice &ttbin, ActivityPtr activity)
     case TT_ACTIVITY_TREADMILL:
         activity->setSport(Activity::TREADMILL);
         break;
+    case TT_ACTIVITY_STOPWATCH:
+        activity->setSport(Activity::STOPWATCH);
+        break;
+    case TT_ACTIVITY_FREESTYLE:
+        activity->setSport(Activity::FREESTYLE);
+        break;
+
     }
 
     // thanks, we'll calculate these.
@@ -365,16 +428,16 @@ bool TTBinReader::readTreadmill(QIODevice &ttbin, ActivityPtr activity)
 {
     /* Tag 0x32
     typedef struct {
-      quint32 time;  // seconds since 1970
-      float distance; // meters
-      quint32 calories;
-      quint32 steps;  // steps?
-      quint16 u2;
+        uint32_t timestamp;     // local time
+        float    distance;      // metres
+        uint16_t calories;
+        uint32_t steps;
+        uint16_t step_length;   // cm, not implemented yet
     } Treadmill; */
 
 
     QByteArray buffer;
-    if ( !readData(ttbin, 0x32, 0x12, buffer))
+    if ( !readData(ttbin, TAG_TREADMILL, 0x10, buffer))
     {
         return false;
     }
@@ -382,21 +445,24 @@ bool TTBinReader::readTreadmill(QIODevice &ttbin, ActivityPtr activity)
 
     LapPtr lap = activity->laps().last();
 
+    float distance = readFloat(data,4);
+
     TrackPointPtr lp = TrackPointPtr::create();
     lp->setTime( readTime( data, 0, false ) );
+    lp->setCummulativeDistance( distance );
 
     if ( lap->points().count() > 0 )
     {
         TrackPointPtr lastPt = lap->points().last();
-        lp->setCummulativeDistance( lastPt->cummulativeDistance() + readFloat(data,4) );
+        lp->setCummulativeDistance( distance );
 
     }
     else
     {
-        lp->setCummulativeDistance( readFloat(data,4));
+        lp->setCummulativeDistance( distance);
     }
-    lp->setCalories( readquint32( data, 8 ));
-    lp->setCadence( readquint32(data, 12));
+    lp->setCalories( readquint16( data, 8 ));
+    lp->setCadence( readquint32(data, 10));
 
     lap->points().append(lp);
 
@@ -407,17 +473,19 @@ bool TTBinReader::readTreadmill(QIODevice &ttbin, ActivityPtr activity)
 
 bool TTBinReader::readSwim(QIODevice &ttbin, ActivityPtr activity)
 {
-        /*
-      *
-    typedef struct {
-      quint32 time;  // Seconds since 1/1/1970
-      quint8 u[14];
-      quint32 calories;
-    } Swim;
+    /*
+    uint32_t timestamp;         // local time
+    float    total_distance;    // metres
+    uint8_t  frequency;
+    uint8_t  stroke_type;
+    uint32_t strokes;           // since the last report
+    uint32_t completed_laps;
+    uint16_t total_calories;
+
     */
 
     QByteArray buffer;
-    if ( !readData(ttbin, 0x34, 0x1c, buffer))
+    if ( !readData(ttbin, TAG_SWIM, 0x1c, buffer))
     {
         return false;
     }
@@ -436,6 +504,46 @@ bool TTBinReader::readSwim(QIODevice &ttbin, ActivityPtr activity)
     return true;
 }
 
+bool TTBinReader::readAltitude(QIODevice &ttbin, ActivityPtr activity)
+{
+    /*
+     * {
+    int16_t rel_altitude;   // altitude change from workout start
+    float   total_climb;    // metres, descents are ignored
+    uint8_t qualifier;      // not defined yet
+    } FILE_ALTITUDE_RECORD;
+    */
+    QByteArray buffer;
+    if ( !readData(ttbin, TAG_ALTITUDE_UPDATE, 0x07, buffer))
+    {
+        return false;
+    }
+    quint8 * data = (quint8*)buffer.data();
+    qint16 rel = readqint16(data, 0);
+    float climb = readFloat(data, 2);
+
+    return true;
+
+
+}
+
+bool TTBinReader::readRecovery(QIODevice &ttbin, ActivityPtr activity)
+{
+    /*typedef struct __attribute__((packed))
+    {
+    uint32_t status;        // 3 = good, 4 = excellent
+    uint32_t heart_rate;    // bpm
+    } FILE_HEART_RATE_RECOVERY_RECORD;*/
+    QByteArray buffer;
+    if ( !readData(ttbin, TAG_HEART_RATE_RECOVERY, 0x08, buffer))
+    {
+        return false;
+    }
+
+    // does this export anywhere?
+
+    return true;
+}
 
 
 bool TTBinReader::skipTag(QIODevice &ttbin, quint8 tag, int size)
@@ -447,7 +555,8 @@ bool TTBinReader::skipTag(QIODevice &ttbin, quint8 tag, int size)
         qWarning() << "TTBinReader::skipTag / not enough data." << QString::number(tag,16) << size << data.length();
         return false;
     }
-    // qWarning() << "TTBinReader::skipTag / skipping tag " << QString::number(tag,16) << pos << size << data.toHex();
+    // qWarning() << "TTBinReader::skipTag / skipping tag " << QString::number(tag,16) << size << data.toHex();
+
     return true;
 }
 
@@ -478,7 +587,7 @@ ActivityPtr TTBinReader::read(QIODevice &ttbin, bool forgiving)
             return ActivityPtr();
         }
 
-        if ( tag != 0x20 )
+        if ( tag != TAG_FILE_HEADER )
         {
 
             if ( !m_RecordLengths.contains(tag) )
@@ -506,7 +615,7 @@ ActivityPtr TTBinReader::read(QIODevice &ttbin, bool forgiving)
 
         switch ( tag )
         {
-        case 0x20: // header;
+        case TAG_FILE_HEADER: // header;
             if ( ttbin.pos() == 1 )
             {
                 result = readHeader(ttbin, ap);
@@ -526,28 +635,29 @@ ActivityPtr TTBinReader::read(QIODevice &ttbin, bool forgiving)
             }
 
             break;
-        case 0x21: // lap.
-            result = readLap(ttbin, ap);
+        case TAG_STATUS: // lap.
+            result = readStatus(ttbin, ap);
             break;
-        case 0x22: // GPS pos + cadence
+        case TAG_GPS: // GPS pos + cadence
             result = readPosition(ttbin, ap, forgiving);
             break;
-        case 0x25: // heart rate on Cardio Models
+        case TAG_HEART_RATE: // heart rate on Cardio Models
             result = readHeartRate(ttbin, ap);
             break;
-        case 0x27: // summary at end.
+        case TAG_SUMMARY: // summary at end.
             result = readSummary(ttbin, ap);
             break;
-        case 0x32:
+        case TAG_TREADMILL:
             result = readTreadmill(ttbin, ap);
             break;
-        case 0x34:
+        case TAG_SWIM:
             result = readSwim(ttbin, ap);
             break;
-
-            /* Unhandled, but known tags */
-        case 0x3f: //heart rate recovery.
-            result = skipTag(ttbin, tag, 0x0f);
+        case TAG_ALTITUDE_UPDATE:
+            result = readAltitude(ttbin, ap);
+            break;
+        case TAG_HEART_RATE_RECOVERY:
+            result = readRecovery(ttbin, ap);
             break;
 
         default:

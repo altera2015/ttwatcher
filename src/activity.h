@@ -11,7 +11,7 @@ class Activity
 {
 
 public:
-    enum Sport { RUNNING, TREADMILL, BIKING, SWIMMING, OTHER };
+    enum Sport { RUNNING, TREADMILL, BIKING, SWIMMING, STOPWATCH, FREESTYLE, OTHER };
 
     Activity();
 

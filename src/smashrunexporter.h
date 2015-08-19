@@ -30,9 +30,11 @@ private:
     ActivityPtr m_ActivityAfterRefresh;
 
     void refreshAuth();
+    void getUsername( QString activityId );
     void activitySubmitted( QJsonDocument & d, int httpCode );    
     void authCodeAnswer( QJsonDocument & d, int httpCode );
     void refreshCodeAnswer( QJsonDocument & d, int httpCode );
+    void getUsernameAnswer(QJsonDocument & d, int httpCode , QNetworkReply *reply);
 };
 
 typedef QSharedPointer<SmashrunExporter>SmashrunExporterPtr;

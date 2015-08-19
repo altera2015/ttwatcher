@@ -11,6 +11,7 @@
 #include <QUrlQuery>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QJsonArray>
 
 #include "httpserver.h"
 #include "singleshot.h"
@@ -20,6 +21,7 @@
 #define AUTH_REQUEST                1
 #define ACTIVITY_SUBMIT             2
 #define REFRESH_TOKEN_REQUEST       3
+#define GET_USERNAME_REQUEST        4
 
 SmashrunExporter::SmashrunExporter(const QString &serial, QObject *parent) :
     IActivityExporter(parent),
@@ -90,7 +92,7 @@ void SmashrunExporter::setup(QWidget *parent)
     q.addQueryItem("client_id", SMASHRUN_CLIENT_ID);
     q.addQueryItem("response_type", "code");
     q.addQueryItem("redirect_uri",  QUrl::toPercentEncoding( cburl.toString(QUrl::FullyEncoded) ));
-    q.addQueryItem("scope", "write_activity");
+    q.addQueryItem("scope", "write_activity read_activity");
 
     smashrunAuthRequest.setQuery(q);
 
@@ -176,14 +178,12 @@ void SmashrunExporter::activitySubmitted(QJsonDocument &d, int httpCode)
     QJsonObject o = d.object();
     if ( o.contains("activityIds") )
     {
-        QUrl u;
-        emit exportFinished(true, tr("Smashrun: Upload done"), u);
-        /* QUrl u(QString("https://www.strava.com/activities/%1").arg( response["activity_id"].toInt() ));
-
-        if ( m_AutoOpen )
+        QJsonArray a = o["activityIds"].toArray();
+        if ( a.count() > 0 )
         {
-            QDesktopServices::openUrl(u);
-        }*/
+            QString activityId = a.first().toString();
+            getUsername( activityId );
+        }
         qDebug() << o["activityIds"].toString();
     }
 }
@@ -219,6 +219,7 @@ void SmashrunExporter::refreshCodeAnswer(QJsonDocument &d, int httpCode)
     emit settingsChanged(this);
 }
 
+
 void SmashrunExporter::refreshAuth()
 {
     // now exchange for the auth token.
@@ -237,7 +238,44 @@ void SmashrunExporter::refreshAuth()
     reply->setProperty("REQUEST", REFRESH_TOKEN_REQUEST);
 }
 
+void SmashrunExporter::getUsername(QString activityId)
+{
+    QNetworkRequest r;
+    QUrl url("https://api.smashrun.com/v1/my/userinfo");
+    QByteArray bearer("Bearer ");
+    bearer.append(m_Config.authToken());
+    r.setRawHeader("Authorization", bearer);
+    r.setUrl( url );
+    QNetworkReply * reply = m_Manager.get( r );
+    reply->setProperty("REQUEST", GET_USERNAME_REQUEST);
+    reply->setProperty("ACTIVITY_ID", activityId);
+}
 
+
+void SmashrunExporter::getUsernameAnswer(QJsonDocument &d, int httpCode, QNetworkReply *reply)
+{
+    if ( httpCode != 200 )
+    {
+        emit exportFinished(false, "Smashrun: Could not get username. (1)", QUrl());
+        return;
+    }
+
+    QJsonObject o = d.object();
+    if ( !o.contains("userName"))
+    {
+        emit exportFinished(false, "Smashrun: Could not get username. (2)", QUrl());
+        return;
+    }
+
+    QString activityId = reply->property("ACTIVITY_ID").toString();
+    QUrl url = QString("http://smashrun.com/%1/run/%2").arg(o["userName"].toString()).arg(activityId);
+    qDebug() << "Url " << url;
+    emit exportFinished(true, "Smashrun: Done", url);
+    if ( m_Config.isAutoOpen() )
+    {
+        QDesktopServices::openUrl(url);
+    }
+}
 
 void SmashrunExporter::requestFinished(QNetworkReply *reply)
 {
@@ -256,8 +294,6 @@ void SmashrunExporter::requestFinished(QNetworkReply *reply)
     if ( pe.error != QJsonParseError::NoError )
     {
         qCritical() << "SmashrunExporter::requestFinished / JSON Parse Error. " << pe.errorString() << requestType << data;
-        reply->deleteLater();
-        return;
     }
 
     switch ( requestType )
@@ -270,6 +306,9 @@ void SmashrunExporter::requestFinished(QNetworkReply *reply)
         break;
     case REFRESH_TOKEN_REQUEST:
         refreshCodeAnswer(d, httpCode);
+        break;
+    case GET_USERNAME_REQUEST:
+        getUsernameAnswer(d, httpCode, reply);
         break;
 
     default:

@@ -45,7 +45,56 @@ void TCXExport::save(QIODevice *dev, ActivityPtr activity)
         stream.writeTextElement("Intensity", "Active");
         stream.writeTextElement("TriggerMethod", "Manual");
 
+        int maxBpm = 0;
+        quint64 totalBpm = 0;
+        int bpmCount = 0;
+        double maxSpeed = 0;
+        double totalSpeed = 0;
+        int speedCount = 0;
+
+        foreach (TrackPointPtr tp, lap->points())
+        {
+            if ( tp->heartRate() >= 0 )
+            {
+                if ( tp->heartRate() > maxBpm )
+                {
+                    maxBpm = tp->heartRate();
+                }
+                totalBpm += tp->heartRate();
+                bpmCount++;
+            }
+
+            totalSpeed += tp->speed();
+            speedCount++;
+            if ( tp->speed() > maxSpeed )
+            {
+                maxSpeed = tp->speed();
+            }
+        }
+        stream.writeTextElement("MaximumSpeed", QString::number( maxSpeed,'f',5 ));
+
+        if ( bpmCount > 0 )
+        {
+            stream.writeStartElement("AverageHeartRateBpm");
+            stream.writeTextElement("Value", QString::number( totalBpm / bpmCount ));
+            stream.writeEndElement(); // avgbpm
+
+            stream.writeStartElement("MaximumHeartRateBpm");
+            stream.writeTextElement("Value", QString::number( maxBpm ));
+            stream.writeEndElement(); // MaximumHeartRateBpm
+        }
+
         stream.writeStartElement("Track");
+
+        if ( speedCount > 0 )
+        {
+            stream.writeStartElement("Extensions");
+            stream.writeStartElement("LX");
+            stream.writeAttribute("xmlns", "http://www.garmin.com/xmlschemas/ActivityExtension/v2");
+            stream.writeTextElement("AvgSpeed", QString::number( totalSpeed / speedCount,'f',5 ));
+            stream.writeEndElement();
+            stream.writeEndElement();
+        }
 
         foreach (TrackPointPtr tp, lap->points())
         {
@@ -65,7 +114,7 @@ void TCXExport::save(QIODevice *dev, ActivityPtr activity)
 
             if ( tp->altitude() > 0.0 )
             {
-                stream.writeTextElement("AltitudeMeters", QString::number(tp->altitude(),'f',9) );
+                stream.writeTextElement("AltitudeMeters", QString::number(tp->altitude(),'f',1) );
             }
             stream.writeTextElement("DistanceMeters", QString::number(tp->cummulativeDistance(),'f',9));
 
@@ -75,6 +124,15 @@ void TCXExport::save(QIODevice *dev, ActivityPtr activity)
                 stream.writeTextElement("Value", QString::number(tp->heartRate()));
                 stream.writeEndElement();
             }
+
+
+            stream.writeStartElement("Extensions");
+            stream.writeStartElement("TPX");
+            stream.writeAttribute("xmlns", "http://www.garmin.com/xmlschemas/ActivityExtension/v2");
+            stream.writeTextElement("Speed", QString::number(tp->speed(),'f',5));
+            stream.writeEndElement();
+            stream.writeEndElement();
+
 
             if ( activity->sport() == Activity::RUNNING )
             {
@@ -122,7 +180,7 @@ void TCXExport::save(QIODevice *dev, ActivityPtr activity)
 
     stream.writeStartElement("Creator");
     stream.writeAttribute("xsi","type","Device_t");
-    stream.writeTextElement("Name", "TomTom GPS Sport Watch");
+    stream.writeTextElement("Name", "TomTom GPS Sport Watch (TTWatcher)");
     stream.writeTextElement("UnitId", "0");
     stream.writeTextElement("ProductID", "0");
     stream.writeEndElement();

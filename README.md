@@ -12,7 +12,7 @@ experiment with improving the ttbin parsing / communications.
 
 # Current Releases
 
-[TTWatcher 1.6.0 for Windows](https://github.com/altera2015/ttwatcher/releases/download/untagged-45f463fbe915f2af6f54/TTWatcherSetup_x86_1.6.0.0.exe)
+[TTWatcher 1.6.0 for Windows](https://github.com/altera2015/ttwatcher/releases/download/v1.6.0/TTWatcherSetup_x86_1.6.0.0.exe)
 
 You can find all releases here
 https://github.com/altera2015/ttwatcher/releases

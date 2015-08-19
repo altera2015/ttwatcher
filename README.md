@@ -10,41 +10,16 @@ experiment with improving the ttbin parsing / communications.
 
 ![](https://raw.githubusercontent.com/altera2015/ttwatcher/master/screenshot1.jpg)
 
-# Releases
+# Current Releases
 
-###1.5.0 March 20, 2015 Added Device Change listener for faster watch detection
-[Download 1.5.0 Installer Here](https://github.com/altera2015/ttwatcher/releases/download/v1.5.0/TTWatcherSetup_x86_1.5.0.0.exe)
-* Removed debug proxy that made it into the release
-* Added WM_DEVICECHANGE listener for faster response to device arrival. 
+[TTWatcher 1.6.0 for Windows](https://github.com/altera2015/ttwatcher/releases/download/untagged-45f463fbe915f2af6f54/TTWatcherSetup_x86_1.6.0.0.exe)
 
+You can find all releases here
+https://github.com/altera2015/ttwatcher/releases
 
-###1.4.0 March 20, 2015 Now Support downloading + GPS QuickFix
-[Download 1.4.0 Installer Here](https://github.com/altera2015/ttwatcher/releases/download/v1.4.0/TTWatcherSetup_x86_1.4.0.0.exe)
-* Support downloading ttbins generally
-* Automatically export to Strava
-* Automatically export to tcx
-* Added settings dialog
-* Added map tile selector
+# Documentation
 
-###1.3.0 March 15, 2015 Fixed installer + Usability
-[Download 1.3.0 Installer Here](https://github.com/altera2015/ttwatcher/releases/download/v1.3.0/TTWatcherSetup_x86_1.3.0.0.exe)
-* Fixed installer ( was missing some Qt files)
-* Fixed TCX export to round to 9 digits instead of 6
-* Added drag and drop support
-
-###1.2.0 March 11, 2015 Fixed Running Cadence
-[Download 1.2.0 Installer Here](https://github.com/altera2015/ttwatcher/releases/download/v1.2.0/TTWatcherSetup_x86_1.2.0.0.exe)
-
-###1.1.0 March 11, 2015 Cleanup and Feature updates
-[Download 1.1.0 Installer Here](https://github.com/altera2015/ttwatcher/releases/download/v1.1.0/TTWatcherSetup_x86_1.1.0.0.exe)
-
-* Added support for Cadence exporting (even during Running activity!)
-* Added support for Elevation Data
-* Improved Graphs
-* Lots of cleanups
-* Added installer
-
-###1.0.0 March 10, 2015 Initial Release
+The [Wiki](https://github.com/altera2015/ttwatcher/wiki) has some information on how to use the application.
 
 # Heritage
 

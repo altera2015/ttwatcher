@@ -54,7 +54,7 @@ void TCXExport::save(QIODevice *dev, ActivityPtr activity)
 
         foreach (TrackPointPtr tp, lap->points())
         {
-            if ( tp->heartRate() >= 0 )
+            if ( tp->heartRate() > 20 && tp->heartRate() < 240 )
             {
                 if ( tp->heartRate() > maxBpm )
                 {
@@ -64,8 +64,11 @@ void TCXExport::save(QIODevice *dev, ActivityPtr activity)
                 bpmCount++;
             }
 
-            totalSpeed += tp->speed();
-            speedCount++;
+            if ( tp->speed() > 0 )
+            {
+                totalSpeed += tp->speed();
+                speedCount++;
+            }
             if ( tp->speed() > maxSpeed )
             {
                 maxSpeed = tp->speed();
@@ -118,7 +121,7 @@ void TCXExport::save(QIODevice *dev, ActivityPtr activity)
             }
             stream.writeTextElement("DistanceMeters", QString::number(tp->cummulativeDistance(),'f',9));
 
-            if ( tp->heartRate() >= 0 )
+            if ( tp->heartRate() > 20 && tp->heartRate() < 240 )
             {
                 stream.writeStartElement("HeartRateBpm");
                 stream.writeTextElement("Value", QString::number(tp->heartRate()));
@@ -184,9 +187,6 @@ void TCXExport::save(QIODevice *dev, ActivityPtr activity)
     stream.writeTextElement("UnitId", "0");
     stream.writeTextElement("ProductID", "0");
     stream.writeEndElement();
-
-
-
 
     stream.writeEndElement(); // activity
     stream.writeEndElement(); // activities

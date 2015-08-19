@@ -40,14 +40,14 @@
 #define TT_ACTIVITY_TREADMILL   7
 #define TT_ACTIVITY_FREESTYLE   8
 
-quint16 TTBinReader::readquint16(quint8 *data, int pos)
+quint16 TTBinReader::readquint16(const quint8 *data, int pos)
 {
     quint16 d = (data[ pos + 0 ] ) |
             (data[ pos + 1 ] << 8 );
     return d;
 }
 
-qint16 TTBinReader::readqint16(quint8 *data, int pos)
+qint16 TTBinReader::readqint16(const quint8 *data, int pos)
 {
     qint16 v;
     quint8 * d = (quint8*)&v;
@@ -65,7 +65,7 @@ qint16 TTBinReader::readqint16(quint8 *data, int pos)
     return v;
 }
 
-quint32 TTBinReader::readquint32(quint8 *data, int pos)
+quint32 TTBinReader::readquint32(const quint8 *data, int pos)
 {
     quint32 d = (data[ pos + 0 ] ) |
             (data[ pos + 1 ] << 8 ) |
@@ -74,7 +74,7 @@ quint32 TTBinReader::readquint32(quint8 *data, int pos)
     return d;
 }
 
-qint32 TTBinReader::readqint32(quint8 *data, int pos)
+qint32 TTBinReader::readqint32(const quint8 *data, int pos)
 {
     qint32 v;
     quint8 * d = (quint8*)&v;
@@ -96,7 +96,7 @@ qint32 TTBinReader::readqint32(quint8 *data, int pos)
     return v;
 }
 
-QDateTime TTBinReader::readTime(quint8 *data, int pos, bool inUTC)
+QDateTime TTBinReader::readTime(const quint8 *data, int pos, bool inUTC)
 {
     quint32 seconds = readquint32(data, pos);
     QDateTime dt = QDateTime::fromTime_t(seconds);
@@ -108,7 +108,7 @@ QDateTime TTBinReader::readTime(quint8 *data, int pos, bool inUTC)
     return dt;
 }
 
-float TTBinReader::readFloat(quint8 *data, int pos)
+float TTBinReader::readFloat(const quint8 *data, int pos)
 {
     float v;
     quint8 * d = (quint8*)&v;
@@ -354,13 +354,13 @@ bool TTBinReader::readPosition(QIODevice &ttbin, ActivityPtr activity, bool forg
         }
     }
 
-
     tp->setCalories( readquint16(data,16) );
     tp->setTime( readTime(data,12, false));
+
+
     //tp->setIncrementalDistance( readFloat(data, 18 ));
     tp->setCummulativeDistance( readFloat(data, 22 ));
     tp->setCadence( data[26] );
-
 
     if ( tp->time().toTime_t() > 0 && tp->latitude() != 0 && tp->longitude() != 0 )
     {
@@ -555,7 +555,11 @@ bool TTBinReader::skipTag(QIODevice &ttbin, quint8 tag, int size)
         qWarning() << "TTBinReader::skipTag / not enough data." << QString::number(tag,16) << size << data.length();
         return false;
     }
-    // qWarning() << "TTBinReader::skipTag / skipping tag " << QString::number(tag,16) << size << data.toHex();
+
+    if ( tag != 0x23 )
+    {
+        qWarning() << "TTBinReader::skipTag / skipping tag " << QString::number(tag,16) << size << data.toHex();
+    }
 
     return true;
 }
@@ -686,4 +690,16 @@ ActivityPtr TTBinReader::read(QIODevice &ttbin, bool forgiving)
     }
 
     return ap;
+}
+
+ActivityPtr TTBinReader::read(const QString &filename, bool forgiving)
+{
+    QFile f(filename);
+    if ( !f.open(QIODevice::ReadOnly))
+    {
+        return ActivityPtr();
+    }
+    ActivityPtr a = read(f,forgiving);
+    a->setFilename(filename);
+    return a;
 }

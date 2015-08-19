@@ -469,11 +469,6 @@ bool TTWatch::downloadPreferences(QByteArray &data)
 
     if ( readFile(data, FILE_PREFERENCES_XML, true ) )
     {
-        QFile tempf("tempf_" + m_Serial + ".xml");
-        tempf.open(QIODevice::WriteOnly);
-        tempf.write(data);
-        tempf.close();
-
         return true;
     }
 
@@ -550,8 +545,9 @@ QStringList TTWatch::download(const QString &basePath, bool deleteWhenDone)
             continue;
         }
 
-        QDateTime t = QDateTime::fromTime_t( (data[11] << 24) | (data[10] << 16) | (data[9] << 8 ) | data[8] );
-
+        QDateTime t = TTBinReader::readTime(data, 8, true);
+        // QDateTime t = QDateTime::fromTime_t( (data[11] << 24) | (data[10] << 16) | (data[9] << 8 ) | data[8] );
+        // t = t.toLocalTime();
         QString exportPath = basePath + QDir::separator() + t.date().toString("yyyy-MM-dd");
         QDir d;
         if (!d.mkpath(exportPath))

@@ -40,18 +40,9 @@ bool MainWindow::processTTBin(const QString& filename)
 
     ui->mapWidget->clearLines();
 
-
-    QFile f(filename);
-    if ( !f.open(QIODevice::ReadOnly ))
-    {
-        ui->statusBar->showMessage(tr("Could not open file %1").arg(filename));
-        return false;
-    }
-
-
     TTBinReader br;
 
-    ActivityPtr a = br.read(f, true);
+    ActivityPtr a = br.read(filename, true);
     m_Activity = a;
 
     if ( !a )
@@ -59,8 +50,6 @@ bool MainWindow::processTTBin(const QString& filename)
         ui->statusBar->showMessage(tr("Could not parse file %1").arg(filename));
         return false;
     }
-
-    a->setFilename( filename );
 
     ui->statusBar->showMessage(tr("Loading Elevation Data..."));
     m_ElevationLoader.load(a);

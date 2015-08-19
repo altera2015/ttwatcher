@@ -11,12 +11,7 @@ class TTBinReader
 {
     QMap<quint8, quint16> m_RecordLengths;
     qint32 m_UTCOffset;
-    quint16 readquint16( quint8 * data, int pos );
-    quint32 readquint32( quint8 * data, int pos );
-    qint16 readqint16(quint8 *data, int pos);
-    qint32 readqint32( quint8 * data, int pos );      
-    QDateTime readTime(quint8 * data, int pos , bool inUTC);
-    float readFloat( quint8 * data, int pos );
+
 
     bool readData( QIODevice & ttbin, quint8 tag, int expectedSize, QByteArray & dest );
     bool readHeader( QIODevice & ttbin, ActivityPtr activity );
@@ -36,6 +31,16 @@ public:
     TTBinReader();
 
     ActivityPtr read( QIODevice & ttbin, bool forgiving = false );
+    ActivityPtr read( const QString &filename, bool forgiving = false );
+
+
+    static quint16 readquint16(const quint8 * data, int pos );
+    static quint32 readquint32(const quint8 * data, int pos );
+    static qint16 readqint16(const quint8 *data, int pos);
+    static qint32 readqint32(const quint8 * data, int pos );
+    static QDateTime readTime(const quint8 * data, int pos , bool inUTC);
+    static float readFloat(const quint8 * data, int pos );
+
 private:
 
 

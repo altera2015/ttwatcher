@@ -12,6 +12,8 @@
 #include <QStringList>
 #include <QMessageBox>
 #include "singleshot.h"
+#include "ttbinreader.h"
+#include "elevationloader.h"
 
 void DownloadDialog::showEvent(QShowEvent *e)
 {
@@ -81,9 +83,6 @@ void DownloadDialog::process()
     foreach ( TTWatch * watch, m_TTManager->watches())
     {
 
-        /**/
-
-
         if ( !m_Settings->autoDownload() )
         {
             continue;
@@ -92,7 +91,7 @@ void DownloadDialog::process()
         WatchExportersPtr exporters = m_TTManager->exporters( watch->serial());
 
         /**********************************************/
-        /* 2. LOAD TTBINS */
+        /* 1. LOAD TTBINS */
         /**********************************************/
 
         workInfo(tr("Downloading .ttbins"), false);
@@ -104,16 +103,48 @@ void DownloadDialog::process()
             workInfo(tr("Exporting .ttbins"), false);
 
             /**********************************************/
-            /* 3. EXPORT TTBINS */
+            /* 2. EXPORT TTBINS */
             /**********************************************/
 
             foreach ( const QString & filename, files )
             {
+                /**********************************************/
+                /* 3. Read TTBIN */
+                /**********************************************/
+
+                workInfo(tr("Reading .ttbin %1").arg(filename), false);
+
+                TTBinReader br;
+                ActivityPtr a = br.read(filename, true);
+                if ( !a )
+                {
+                    workInfo(tr("failed to parse %1.").arg(filename), false);
+                    qDebug() << "DownloadDialog::process / could not parse file " << filename;
+                    continue;
+                }
+
+                /**********************************************/
+                /* 4. Load Elevation Data */
+                /**********************************************/
+
+                workInfo(tr("Downloading Elevation Data for %1.").arg(filename), false);
+                ElevationLoader el;
+                if ( el.load(a, true) != ElevationLoader::SUCCESS )
+                {
+                    workInfo(tr("failed to download elevation data for %1.").arg(filename), false);
+                    continue;
+                }
+
+                /**********************************************/
+                /* 5. Export TTBIN */
+                /**********************************************/
+
                 workInfo(tr("Exporting .ttbin . %1").arg(filename), false);
 
-                if ( !exporters->exportFile(filename) )
+                if ( !exporters->exportActivity(a) )
                 {
                     workInfo(tr("Exporting .ttbin failed. %1").arg(filename), false);
+                    continue;
                 }
             }
 
@@ -135,7 +166,7 @@ void DownloadDialog::process()
 
 
     /**********************************************/
-    /* 5. APPLY GPS QUICK FIX DATA */
+    /* 6. APPLY GPS QUICK FIX DATA */
     /**********************************************/
 
     if ( shouldDownloadQuickFix )

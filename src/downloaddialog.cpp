@@ -183,8 +183,7 @@ void DownloadDialog::process()
 }
 
 void DownloadDialog::workInfo(const QString &message, bool done)
-{
-    qDebug() << "DownloadDialog::workInfo" << message<< done;
+{    
     ui->logWidget->addItem(message);
     qApp->processEvents();
     if ( done )

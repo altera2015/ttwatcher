@@ -174,7 +174,6 @@ void SmashrunExporter::activitySubmitted(QJsonDocument &d, int httpCode)
     }
     m_ActivityAfterRefresh.clear();
 
-    // {"activityIds":["2790031"]}
     QJsonObject o = d.object();
     if ( o.contains("activityIds") )
     {
@@ -184,7 +183,6 @@ void SmashrunExporter::activitySubmitted(QJsonDocument &d, int httpCode)
             QString activityId = a.first().toString();
             getUsername( activityId );
         }
-        qDebug() << o["activityIds"].toString();
     }
 }
 
@@ -269,7 +267,6 @@ void SmashrunExporter::getUsernameAnswer(QJsonDocument &d, int httpCode, QNetwor
 
     QString activityId = reply->property("ACTIVITY_ID").toString();
     QUrl url = QString("http://smashrun.com/%1/run/%2").arg(o["userName"].toString()).arg(activityId);
-    qDebug() << "Url " << url;
     emit exportFinished(true, "Smashrun: Done", url);
     if ( m_Config.isAutoOpen() )
     {
@@ -284,8 +281,6 @@ void SmashrunExporter::requestFinished(QNetworkReply *reply)
 
     int httpCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
     QByteArray data = reply->readAll();
-
-    qDebug() << "SmashrunExporter " << data;
 
     QJsonParseError pe;
     QJsonDocument d = QJsonDocument::fromJson(data, &pe);

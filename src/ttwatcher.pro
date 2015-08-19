@@ -8,7 +8,7 @@ win32:RC_FILE = ttwatcher.rc
 linux:CONFIG += c++11
 linux:LIBS +=-lusb-1.0
 
-DEFINES+=USE_DEBUG_PROXY
+#DEFINES+=USE_DEBUG_PROXY
 DEFINES+=Q_HTTP_STATIC_BUILD
 
 SOURCES += main.cpp\

@@ -20,7 +20,7 @@
 #define TAG_POOL_SIZE           (0x2a)
 #define TAG_WHEEL_SIZE          (0x2b)
 #define TAG_TRAINING_SETUP      (0x2d)
-#define TAG_LAP                 (0x2f)
+#define TAG_LAP                 (0x2f)  // OK
 #define TAG_TREADMILL           (0x32)  // OK
 #define TAG_SWIM                (0x34)  // OK
 #define TAG_GOAL_PROGRESS       (0x35)

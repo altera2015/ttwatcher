@@ -12,8 +12,8 @@ experiment with improving the ttbin parsing / communications.
 
 # Current Releases
 
-[TTWatcher 1.7.0 for Windows](https://github.com/altera2015/ttwatcher/releases/download/v1.7.0/TTWatcherSetup_x86_1.7.0.0.exe)
-[TTWatcher 1.7.0 for OSX](https://github.com/altera2015/ttwatcher/releases/download/v1.7.0/ttwatcher-1.7.0.dmg)
+* [TTWatcher 1.7.0 for Windows](https://github.com/altera2015/ttwatcher/releases/download/v1.7.0/TTWatcherSetup_x86_1.7.0.0.exe)
+* [TTWatcher 1.7.0 for OSX](https://github.com/altera2015/ttwatcher/releases/download/v1.7.0/ttwatcher-1.7.0.dmg)
 
 You can find all releases here
 https://github.com/altera2015/ttwatcher/releases

@@ -38,7 +38,7 @@ class MainWindow : public QMainWindow, public QAbstractNativeEventFilter
 
     void dragEnterEvent(QDragEnterEvent *e);
     void dropEvent(QDropEvent *e);
-    void download();
+    void download(bool manualDownload);
 public:
     explicit MainWindow(QWidget *parent = 0);
     ~MainWindow();

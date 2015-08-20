@@ -3,19 +3,6 @@
 #include "singleshot.h"
 #include <QDebug>
 
-void ExportWorkingDialog::showEvent(QShowEvent *e)
-{
-    QDialog::showEvent(e);
-
-    ui->logWidget->clear();
-
-    // we have to run process a bit after showEvent is done, otherwise
-    // we might call accepted while still in showEvent,
-    // which apparently fails.
-    SingleShot::go([this]{
-        process();
-    }, 250, true, this);
-}
 
 ExportWorkingDialog::ExportWorkingDialog(ActivityPtr activity, WatchExportersPtr exporters, const QString &exporterName, QWidget *parent) :
     QDialog(parent),
@@ -29,6 +16,10 @@ ExportWorkingDialog::ExportWorkingDialog(ActivityPtr activity, WatchExportersPtr
 
     connect(m_Exporters.data(), SIGNAL(allExportsFinished()), this, SLOT(onExportingFinished()));
     connect(m_Exporters.data(), SIGNAL(exportFinished(bool,QString,QUrl)), this, SLOT(onExportFinished(bool,QString,QUrl)));
+    connect(&m_Timer, SIGNAL(timeout()), this, SLOT(process()), Qt::QueuedConnection);
+    m_Timer.setSingleShot(true);
+    m_Timer.start(100);
+
 }
 
 ExportWorkingDialog::~ExportWorkingDialog()
@@ -56,12 +47,13 @@ void ExportWorkingDialog::workInfo(const QString &message, bool done)
 {
     qDebug() << "ExportWorkingDialog::workInfo" << message<< done;
     ui->logWidget->addItem(message);
-    qApp->processEvents();
+    qApp->processEvents(QEventLoop::AllEvents);
     if ( done )
     {
         if ( !m_HadError )
         {
-            accept();
+            // on OSX we can't call accept , dont know why.
+            QMetaObject::invokeMethod(this, "accept",Qt::QueuedConnection);
         }
         else
         {

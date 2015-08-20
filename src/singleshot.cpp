@@ -3,10 +3,10 @@
 
 SingleShot::SingleShot(Callback cb, int ms, bool autoDelete, QObject *parent) :
     QObject(parent),
-    m_CB(cb),
-    m_AutoDelete(autoDelete)
+    m_AutoDelete(autoDelete),
+    m_CB(cb)
 {
-    connect(&m_Timer, SIGNAL(timeout()), this, SLOT(onTimeout()));
+    connect(&m_Timer, SIGNAL(timeout()), this, SLOT(onTimeout()), Qt::QueuedConnection);
     m_Timer.setSingleShot(true);
 
     if ( ms > 0 )

@@ -17,7 +17,7 @@
    <item>
     <widget class="QLabel" name="label">
      <property name="text">
-      <string>Downloading...</string>
+      <string>Exporting...</string>
      </property>
     </widget>
    </item>

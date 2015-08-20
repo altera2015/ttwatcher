@@ -259,23 +259,7 @@ void MainWindow::onElevationLoaded(bool success, ActivityPtr activity)
     int zoom = ui->mapWidget->boundsToZoom( bounds );
     ui->mapWidget->setCenter(zoom, center.y(), center.x());
     ui->mapWidget->repaint();
-
-
-
-    /*
-    QFile of(m_Activity->filename() + ".tcx");
-    if (!of.open(QIODevice::WriteOnly))
-    {
-        ui->statusBar->showMessage(tr("Could not save tcx file %1.").arg(m_Activity->filename()+".tcx"));
-        return;
-    }
-
-
-    TCXExport e;
-    e.save(&of, m_Activity);
-    of.close();*/
 }
-
 
 
 
@@ -324,7 +308,7 @@ void MainWindow::dropEvent(QDropEvent *e)
     }
 }
 
-void MainWindow::download()
+void MainWindow::download(bool manualDownload)
 {
     DownloadDialog * dd = findChild<DownloadDialog*>();
     if ( !dd )
@@ -332,9 +316,8 @@ void MainWindow::download()
         dd = new DownloadDialog(&m_Settings, &m_TTManager, this);
     }
 
-    if ( dd->processWatches() == QDialog::Accepted )
+    if ( dd->processWatches(manualDownload) == QDialog::Accepted )
     {
-
         // place the UI interaction on a slight delay to give the m_FSModel a chance
         // to pick up the new files.
         SingleShot::go([this, dd](){
@@ -358,9 +341,9 @@ void MainWindow::download()
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
-    ui(new Ui::MainWindow),
     m_Axis3(0),
-    m_Axis4(0)
+    m_Axis4(0),
+    ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
 
@@ -524,7 +507,8 @@ bool MainWindow::nativeEventFilter(const QByteArray &eventType, void *message, l
     }
 
     return false;
-
+#else
+    return false;
 #endif
 }
 
@@ -568,8 +552,6 @@ void MainWindow::exportActivity(const QString &exporterName)
         ExportWorkingDialog ewd(m_Activity, prefs, exporterName, this);
         ewd.exec();
 
-
-
         /* if ( !prefs->exportActivity(m_Activity, exporterName) )
         {
             QMessageBox::warning(this, tr("Warning"), tr("Exporting to %1 has not yet been setup, please go to the settings and configure it first.").arg(exporterName));
@@ -603,7 +585,7 @@ void MainWindow::onWatchArrivedDelay()
     {
         return;
     }
-    download();
+    download(false);
 }
 
 void MainWindow::onGraphMouseMove(QMouseEvent *event)
@@ -780,5 +762,5 @@ void MainWindow::on_actionSettings_triggered()
 
 void MainWindow::on_actionDownload_from_watch_triggered()
 {
-    download();
+    download(true);
 }

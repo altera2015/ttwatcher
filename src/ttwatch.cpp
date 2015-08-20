@@ -8,6 +8,7 @@
 #include <QDesktopServices>
 #include <QBuffer>
 #include <QByteArray>
+#include <QEventLoop>
 
 #include "ttbinreader.h"
 #include "tcxexport.h"
@@ -79,7 +80,7 @@ bool TTWatch::sendCommand(const QByteArray &command, QByteArray &response)
 
     response.resize(64);
 
-    if ( hid_read( m_Device, (unsigned char*)response.data(), 64) < 64 )
+    if ( hid_read_timeout( m_Device, (unsigned char*)response.data(), 64,1000) < 64 )
     {
         qDebug() << "TTWatch::sendCommand / read failed.";
         return false;
@@ -151,7 +152,8 @@ bool TTWatch::_readFile(QByteArray &dest, const TTFile &file, bool processEvents
     {
         if ( pos > 0 && processEvents )
         {
-            QCoreApplication::processEvents();
+            //QCoreApplication::processEvents();
+            // macos doesn't handle this very well.
         }
 
         quint8 len = qMin( (quint32)maxReadSize, quint32(file.length - pos) );

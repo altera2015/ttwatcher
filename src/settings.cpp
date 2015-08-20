@@ -15,6 +15,7 @@ Settings::Settings(QObject *parent) :
     m_LastZoom(13),
     m_AutoDownload(false)
 {
+    qDebug()<<Settings::settingsFilename() ;
 }
 
 QString Settings::tileUrl() const

@@ -200,6 +200,16 @@ WatchExportersPtr TTManager::exporters(const QString &serial)
     connect(wp.data(), SIGNAL(exportError(QString)), this, SIGNAL(exportError(QString)));
     connect(wp.data(), SIGNAL(settingsChanged(QString)), this, SLOT(configChanged(QString)));
     m_WatchExporters[ serial ] = wp;
+
+    if ( serial == "DEFAULT")
+    {
+        wp->setName(tr("Default"));
+        IActivityExporterPtr ae = wp->exporter("TCX");
+        if ( ae )
+        {
+            ae->config().setValid(true);
+        }
+    }
     return wp;
 }
 
@@ -475,10 +485,7 @@ void TTManager::loadAllConfig()
         }
     }
 
-    if ( !defaultExporters() )
-    {
-        setupDefaultExporter();
-    }
+    defaultExporters();
 }
 
 QString TTManager::configDir() const
@@ -538,14 +545,3 @@ void TTManager::configChanged(QString serial)
     saveAllConfig(true, serial);
 }
 
-void TTManager::setupDefaultExporter()
-{
-    WatchExportersPtr p = exporters("DEFAULT");
-    p->setName("Default");
-
-    IActivityExporterPtr ae = p->exporter("TCX");
-    if ( ae )
-    {
-        ae->config().setValid(true);
-    }
-}

@@ -18,6 +18,7 @@ class DownloadDialog : public QDialog
     TTManager * m_TTManager;
     QNetworkAccessManager m_Manager;
     QStringList m_Files;
+    bool m_ManualDownload;
 
 protected:
     void showEvent(QShowEvent *e);
@@ -25,7 +26,7 @@ protected:
 public:
     explicit DownloadDialog(Settings * settings, TTManager * ttManager, QWidget *parent = 0);
     ~DownloadDialog();
-    int processWatches();
+    int processWatches(bool manualDownload);
     QStringList filesDownloaded() const;
 private slots:
     void process();

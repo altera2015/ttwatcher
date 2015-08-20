@@ -4,6 +4,7 @@
 #include <QDialog>
 #include "watchexporters.h"
 #include "activity.h"
+#include <QTimer>
 
 namespace Ui {
 class ExportWorkingDialog;
@@ -16,8 +17,9 @@ class ExportWorkingDialog : public QDialog
     WatchExportersPtr m_Exporters;
     QString m_ExporterName;
     bool m_HadError;
+    QTimer m_Timer;
 
-    void showEvent(QShowEvent *e);
+   // void showEvent(QShowEvent *e);
 
 public:
     explicit ExportWorkingDialog(ActivityPtr activity, WatchExportersPtr exporters, const QString &exporterName, QWidget *parent = 0);

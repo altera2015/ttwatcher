@@ -53,8 +53,9 @@ DownloadDialog::~DownloadDialog()
     delete ui;
 }
 
-int DownloadDialog::processWatches()
+int DownloadDialog::processWatches(bool manualDownload)
 {
+
     // if the window is already visible we don't need to process.
     if ( this->isVisible() )
     {
@@ -62,6 +63,7 @@ int DownloadDialog::processWatches()
         return QDialog::Rejected;
     }
 
+    m_ManualDownload = manualDownload;
     return exec();
 }
 
@@ -83,7 +85,7 @@ void DownloadDialog::process()
     foreach ( TTWatch * watch, m_TTManager->watches())
     {
 
-        if ( !m_Settings->autoDownload() )
+        if ( !m_ManualDownload && !m_Settings->autoDownload() )
         {
             continue;
         }
@@ -188,7 +190,7 @@ void DownloadDialog::workInfo(const QString &message, bool done)
     qApp->processEvents();
     if ( done )
     {
-        accept();
+        QMetaObject::invokeMethod(this, "accept",Qt::QueuedConnection);
     }
 }
 

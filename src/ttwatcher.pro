@@ -7,6 +7,13 @@ win32:LIBS +=-lUser32 -lPsapi -lhid -lsetupapi
 win32:RC_FILE = ttwatcher.rc
 linux:CONFIG += c++11
 linux:LIBS +=-lusb-1.0
+unix:macx:CONFIG += app_bundle
+unix:macx:LIBS+=-framework IOKit -framework CoreFoundation
+unix:macx:QMAKE_CXXFLAGS+= -stdlib=libc++
+unix:macx:CONFIG+=c++11
+unix:macx:ICON=runningman2.icns
+unix:macx:QMAKE_INFO_PLIST=Info.plist
+
 
 #DEFINES+=USE_DEBUG_PROXY
 DEFINES+=Q_HTTP_STATIC_BUILD
@@ -112,3 +119,6 @@ else:unix:PRE_TARGETDEPS += $$OUT_PWD/../qhttpserver/src/libqhttpserver.a
 
 OTHER_FILES += \
     smashrun.html
+
+DISTFILES += \
+    runningman2.icns

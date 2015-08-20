@@ -67,9 +67,6 @@ public slots:
 
     void checkForTTs();
 
-private:
-
-    void setupDefaultExporter();
 private slots:
     void configChanged( QString serial );
 

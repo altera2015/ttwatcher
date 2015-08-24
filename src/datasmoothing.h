@@ -3,6 +3,7 @@
 
 #include <QVector>
 
+// sliding window moving average
 template<class T>
 class DataSmoothing
 {    

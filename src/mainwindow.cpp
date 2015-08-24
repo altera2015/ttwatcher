@@ -25,6 +25,7 @@
 #include "settingsdialog.h"
 #include "aboutdialog.h"
 #include "downloaddialog.h"
+#include "centeredexpmovavg.h"
 
 #ifdef _WIN32
 #include <dbt.h>
@@ -97,12 +98,13 @@ void MainWindow::onElevationLoaded(bool success, ActivityPtr activity)
 
     quint64 firstTime = 0;
 
-    DataSmoothing<int> cadence;
-    DataSmoothing<int> speed;
-    DataSmoothing<int> heartBeat;
-    DataSmoothing<int> altitude;
+    CenteredExpMovAvg cadence(61, 0.95);
+    CenteredExpMovAvg speed(21, 0.95);
+    CenteredExpMovAvg heartBeat(31, 0.95);
+    CenteredExpMovAvg altitude(61, 0.95);
 
     TrackPointPtr prev;
+
     foreach( LapPtr lap, m_Activity->laps())
     {
 
@@ -158,38 +160,49 @@ void MainWindow::onElevationLoaded(bool success, ActivityPtr activity)
 
             if ( success )
             {
-                m_Elevation.append( altitude.add(tp->altitude()) );
+                altitude.add(tp->altitude());
             }
 
             if ( tp->heartRate() > 0 )
             {
-                m_HeartBeat.append( heartBeat.add(tp->heartRate()) );
+                heartBeat.add(tp->heartRate());
                 lastHeart = tp->heartRate();
             }
             else
             {
-                m_HeartBeat.append( heartBeat.add(lastHeart) );
+                heartBeat.add(lastHeart);
             }
 
-            m_Speed.append( speed.add(tp->speed() * 3.6) );
+            speed.add(tp->speed() * 3.6);
 
             if ( m_Activity->sport() == Activity::RUNNING )
-            {
-                if ( tp->cadence() > 0 )
-                {
-                    cadence.add( tp->cadence() );
-                }
-
-                m_Cadence.append( 60.0 * cadence.value() );
-
+            {                
+                int c = qMin(4, tp->cadence());
+                cadence.add( 60 * c );
             }
             if ( m_Activity->sport() == Activity::BIKING )
-            {
-                m_Cadence.append( cadence.add(tp->cadence()) );
+            {                
+                cadence.add( tp->cadence() );
             }
 
         }
     }
+
+    m_Cadence.clear();
+    m_HeartBeat.clear();
+    m_Elevation.clear();
+    m_Speed.clear();
+    for(int i =0; i< cadence.size();i++)
+    {
+        m_Cadence.append( cadence.cea(i));
+        m_HeartBeat.append( heartBeat.cea(i));
+        if ( success )
+        {
+            m_Elevation.append( altitude.cea(i));
+        }
+        m_Speed.append( speed.cea(i));
+    }
+
     if ( m_Axis3 == 0 )
     {
         m_Axis3 = ui->graph->axisRect(0)->addAxis(QCPAxis::atLeft);
@@ -251,8 +264,21 @@ void MainWindow::onElevationLoaded(bool success, ActivityPtr activity)
     ui->graph->graph(3)->setVisible( ui->actionShow_Elevation->isChecked() );
 
 
+
+    /* Usefull to set all graphs to same y-axis range.
+    for (int i=0;i<=3;i++)
+    {
+        ui->graph->graph(i)->valueAxis()->setRangeLower(0.0);
+        ui->graph->graph(i)->valueAxis()->setRangeUpper(255);
+    }
+    */
+
     ui->graph->rescaleAxes();
     ui->graph->graph(1)->valueAxis()->setRangeLower(0.0);
+    ui->graph->graph(2)->valueAxis()->setRangeLower(0.0);
+    ui->graph->graph(2)->valueAxis()->setRangeUpper(200);
+
+
     ui->graph->replot();
 
     QPointF center = bounds.center();

@@ -51,7 +51,8 @@ SOURCES += main.cpp\
     runkeeperexporterconfig.cpp \
     smashrunexporterconfig.cpp \
     watchexporters.cpp \
-    exportworkingdialog.cpp
+    exportworkingdialog.cpp \
+    centeredexpmovavg.cpp
 
 win32:SOURCES+=hid.c
 unix:linux:SOURCES+=hidlinux.c
@@ -93,7 +94,8 @@ HEADERS  += mainwindow.h \
     runkeeperexporterconfig.h \
     smashrunexporterconfig.h \
     watchexporters.h \
-    exportworkingdialog.h
+    exportworkingdialog.h \
+    centeredexpmovavg.h
 
 FORMS    += mainwindow.ui \
     settingsdialog.ui \

@@ -1,5 +1,6 @@
 #include "tcxexport.h"
 #include <QDebug>
+#include <centeredexpmovavg.h>
 
 TCXExport::TCXExport()
 {
@@ -7,7 +8,7 @@ TCXExport::TCXExport()
 
 void TCXExport::save(QIODevice *dev, ActivityPtr activity)
 {
-    QVector<int> cadence;
+    CenteredExpMovAvg cadence;
 
     QXmlStreamWriter stream(dev);
     stream.setAutoFormatting(true);
@@ -26,6 +27,24 @@ void TCXExport::save(QIODevice *dev, ActivityPtr activity)
     stream.writeAttribute("Sport", activity->sportString());
 
     stream.writeTextElement("Id", activity->date().toUTC().toString(Qt::ISODate));
+
+
+    // pre-process the cadence.
+    foreach( LapPtr lap, activity->laps() )
+    {
+        if ( lap->points().count() == 0 )
+        {
+            continue;
+        }
+        foreach (TrackPointPtr tp, lap->points())
+        {
+            int c = qMin(4, tp->cadence());
+            cadence.add( c );
+        }
+    }
+
+
+    int pos = -1;
     foreach( LapPtr lap, activity->laps() )
     {
         if ( lap->points().count() == 0 )
@@ -95,6 +114,7 @@ void TCXExport::save(QIODevice *dev, ActivityPtr activity)
 
         foreach (TrackPointPtr tp, lap->points())
         {
+            pos++;
             stream.writeStartElement("Trackpoint");
 
 
@@ -125,48 +145,12 @@ void TCXExport::save(QIODevice *dev, ActivityPtr activity)
 
 
             if ( activity->sport() == Activity::RUNNING )
-            {
-
-                // the first trackpoint has counted steps before starting.
-                // that means the first data point will have potentially a lot of steps
-                // so skip that guy.
-
-                if ( tp->cadence() > 0 && tp != lap->points().first() )
-                {
-                    cadence.push_front( tp->cadence() );
-                }
-
-                if ( cadence.count() > 0 )
-                {
-                    double dc = 0;
-                    foreach ( int c, cadence )
-                    {
-                        dc+=c;
-                    }
-                    if ( cadence.count() > 10 )
-                    {
-                        int c = (int)(0.5 * 60.0 * dc / cadence.count()) ;
-                        if ( c > 254 )
-                        {
-                            c = 254;
-                        }
-                        //stream.writeTextElement("Cadence", QString::number( c ));
-                    }
-                }
-
-                while ( cadence.count() > 30  )
-                {                    
-                    cadence.pop_back();
-                }
+            {                
+                stream.writeTextElement("Cadence", QString::number( cadence.cea(pos) * 30.0 ));
             }
             if ( activity->sport() == Activity::BIKING )
             {
-                int c = tp->cadence();
-                if (c > 254 )
-                {
-                    c = 254;
-                }
-                stream.writeTextElement("Cadence", QString::number(c));
+                stream.writeTextElement("Cadence", QString::number( cadence.cea(pos) ));
             }
 
             stream.writeStartElement("Extensions");

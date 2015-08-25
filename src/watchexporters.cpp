@@ -96,6 +96,11 @@ void WatchExporters::freeImportMap(IExporterConfigMap &map)
 
 bool WatchExporters::exportActivity(ActivityPtr activity, const QString & exporterName, QStringList * sl)
 {
+    if ( m_ExportFinishedCounter != 0 )
+    {
+        return false;
+    }
+
     foreach ( IActivityExporterPtr ae, m_Exporters )
     {
         if ( ( exporterName == "" || ae->name() == exporterName) )

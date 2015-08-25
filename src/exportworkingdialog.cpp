@@ -40,6 +40,7 @@ void ExportWorkingDialog::process()
     else
     {
         workInfo(tr("Could not export"), true);
+        ui->cancelButton->setEnabled(true);
     }
 }
 

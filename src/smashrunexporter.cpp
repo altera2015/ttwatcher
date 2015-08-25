@@ -183,6 +183,11 @@ void SmashrunExporter::activitySubmitted(QJsonDocument &d, int httpCode)
             QString activityId = a.first().toString();
             getUsername( activityId );
         }
+        return;
+    }
+    if ( o.contains("validations"))
+    {
+        emit exportFinished(false, tr("Error exporting."), QUrl());
     }
 }
 

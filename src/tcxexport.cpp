@@ -146,11 +146,11 @@ void TCXExport::save(QIODevice *dev, ActivityPtr activity)
 
             if ( activity->sport() == Activity::RUNNING )
             {                
-                stream.writeTextElement("Cadence", QString::number( cadence.cea(pos) * 30.0 ));
+                stream.writeTextElement("Cadence", QString::number( round(cadence.cea(pos) * 30.0 )));
             }
             if ( activity->sport() == Activity::BIKING )
             {
-                stream.writeTextElement("Cadence", QString::number( cadence.cea(pos) ));
+                stream.writeTextElement("Cadence", QString::number( round(cadence.cea(pos) )));
             }
 
             stream.writeStartElement("Extensions");
@@ -186,7 +186,7 @@ void TCXExport::save(QIODevice *dev, ActivityPtr activity)
     stream.writeTextElement("UnitId", "0");
     stream.writeTextElement("ProductID", "0");
     stream.writeStartElement("Version");
-    stream.writeTextElement("VersionMajor", "0");
+    stream.writeTextElement("VersionMajor", "1");
     stream.writeTextElement("VersionMinor", "0");
     stream.writeTextElement("BuildMajor", "0");
     stream.writeTextElement("BuildMinor", "0");

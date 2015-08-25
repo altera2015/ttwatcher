@@ -166,7 +166,6 @@ void DownloadDialog::process()
 
     }
 
-
     /**********************************************/
     /* 6. APPLY GPS QUICK FIX DATA */
     /**********************************************/
@@ -208,9 +207,15 @@ void DownloadDialog::onFinished(QNetworkReply *reply)
     foreach ( TTWatch * watch, m_TTManager->watches())
     {
         workInfo(tr("Writing GPS Quick Fix data to %1...").arg(watch->serial()), false);
-        watch->writeFile( data, FILE_GPSQUICKFIX_DATA, true );
-        qDebug() << "PostGPS FIX" << watch->postGPSFix();
-        m_Settings->setQuickFixDate( watch->serial(), QDateTime::currentDateTime());
+        if ( watch->writeFile( data, FILE_GPSQUICKFIX_DATA, true ) )
+        {
+            qDebug() << "PostGPS FIX" << watch->postGPSFix();
+            m_Settings->setQuickFixDate( watch->serial(), QDateTime::currentDateTime());
+        }
+        else
+        {
+            qDebug() << "GPS Fix failed.";
+        }
     }
 
     onExportingFinished();

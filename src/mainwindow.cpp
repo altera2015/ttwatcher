@@ -672,7 +672,7 @@ void MainWindow::onGraphMouseMove(QMouseEvent *event)
     {
         int cadence = 0;
         int idx = m_Seconds.indexOf( round(pos) );
-        if ( idx > 0 )
+        if ( idx > 0 && idx < m_Cadence.count() )
         {
             cadence = m_Cadence.at(idx);
         }
@@ -733,7 +733,26 @@ void MainWindow::on_treeView_clicked(const QModelIndex &index)
     processTTBin(item->filename());
 }
 
-
+void selectFileInExplorer(const QString& path){
+#if defined(Q_OS_WIN)
+    const QString explorer = "explorer";
+        QStringList param;
+        if (!QFileInfo(path).isDir())
+            param << QLatin1String("/select,");
+        param << QDir::toNativeSeparators(path);
+        QProcess::startDetached(explorer, param);
+#elif defined(Q_OS_MAC)
+    QStringList scriptArgs;
+        scriptArgs << QLatin1String("-e")
+                   << QString::fromLatin1("tell application \"Finder\" to reveal POSIX file \"%1\"")
+                                         .arg(path);
+        QProcess::execute(QLatin1String("/usr/bin/osascript"), scriptArgs);
+        scriptArgs.clear();
+        scriptArgs << QLatin1String("-e")
+                   << QLatin1String("tell application \"Finder\" to activate");
+        QProcess::execute("/usr/bin/osascript", scriptArgs);
+#endif
+}
 
 void MainWindow::on_actionShow_in_explorer_triggered()
 {    
@@ -749,11 +768,12 @@ void MainWindow::on_actionShow_in_explorer_triggered()
     TTWorkoutItem * item = m_WorkoutTreeModel.indexToWorkoutItem(sourceIndex);
     if ( item != 0 )
     {
-        QFileInfo f(item->filename());
-        filename = f.absolutePath();
+        // QFileInfo f();
+        filename = item->filename();
     }
 
-    QDesktopServices::openUrl( QUrl::fromLocalFile(filename ) );
+    // QDesktopServices::openUrl( QUrl::fromLocalFile(filename ) );
+    selectFileInExplorer(filename);
 }
 
 

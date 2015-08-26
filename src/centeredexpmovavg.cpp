@@ -1,4 +1,5 @@
 #include "centeredexpmovavg.h"
+#include <math.h>
 
 CenteredExpMovAvg::CenteredExpMovAvg(int windowSize, double base) :
     m_WindowSize(windowSize)

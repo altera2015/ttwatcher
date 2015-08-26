@@ -139,7 +139,7 @@ float TTBinReader::readFloat(const quint8 *data, int pos)
 
 
 
-bool TTBinReader::readHeader(QIODevice &ttbin, ActivityPtr activity )
+bool TTBinReader::readHeader(QIODevice &ttbin, ActivityPtr activity , QByteArray *cpy)
 {
     /*
 
@@ -169,6 +169,10 @@ bool TTBinReader::readHeader(QIODevice &ttbin, ActivityPtr activity )
         qWarning() << "TTBinReader::readHeader / not enough bytes read.";
         return false;
     }
+    if ( cpy )
+    {
+        cpy->append((char*)data, 0x75);
+    }
 
     if ( data[0] < 7 )
     {
@@ -176,7 +180,10 @@ bool TTBinReader::readHeader(QIODevice &ttbin, ActivityPtr activity )
         return false;
     }
 
-    activity->setDate( readTime(data, 7, true));
+    if ( activity )
+    {
+        activity->setDate( readTime(data, 7, true));
+    }
     // UTC offset at pos 15 int32
     m_UTCOffset = readqint32(data, 15);
 
@@ -186,6 +193,10 @@ bool TTBinReader::readHeader(QIODevice &ttbin, ActivityPtr activity )
     {
         quint8 lenrec[3];
         ttbin.read((char*)lenrec, 3);
+        if ( cpy )
+        {
+            cpy->append((char*)lenrec, 3);
+        }
         quint8 tag = lenrec[0];
         quint16 len = ( lenrec[1] | lenrec[2] << 8) - 1; // length includes the tag, we exclude it.
 
@@ -199,10 +210,13 @@ bool TTBinReader::readHeader(QIODevice &ttbin, ActivityPtr activity )
     }
 
 
-    LapList & ll = activity->laps();
-    if ( ll.count() == 0 )
+    if ( activity )
     {
-        ll.append( LapPtr::create() );
+        LapList & ll = activity->laps();
+        if ( ll.count() == 0 )
+        {
+            ll.append( LapPtr::create() );
+        }
     }
     return true;
 }
@@ -551,7 +565,7 @@ bool TTBinReader::readRecovery(QIODevice &ttbin, ActivityPtr activity)
 }
 
 
-bool TTBinReader::skipTag(QIODevice &ttbin, quint8 tag, int size)
+bool TTBinReader::skipTag(QIODevice &ttbin, quint8 tag, int size, QByteArray * cpy)
 {
     //int pos = ttbin.pos();
     QByteArray data = ttbin.read(size);
@@ -559,6 +573,11 @@ bool TTBinReader::skipTag(QIODevice &ttbin, quint8 tag, int size)
     {
         qWarning() << "TTBinReader::skipTag / not enough data." << QString::number(tag,16) << size << data.length();
         return false;
+    }
+
+    if ( cpy )
+    {
+        cpy->append(data);
     }
 
     return true;
@@ -714,4 +733,139 @@ ActivityPtr TTBinReader::read(const QString &filename, bool forgiving, bool head
     ActivityPtr a = read(f,forgiving, headerAndSummaryOnly);
     a->setFilename(filename);
     return a;
+}
+
+
+// needs cleaning up
+bool TTBinReader::updateActivityType(QIODevice &ttbin, bool forgiving, QIODevice &output, Activity::Sport newSport)
+{
+    quint8 newType = 0;
+    switch ( newSport )
+    {
+    case Activity::RUNNING:
+        newType = TT_ACTIVITY_RUN;
+        break;
+    case Activity::BIKING:
+        newType = TT_ACTIVITY_CYCLE;
+        break;
+    case Activity::SWIMMING:
+        newType = TT_ACTIVITY_SWIM;
+        break;
+    case Activity::TREADMILL:
+        newType = TT_ACTIVITY_TREADMILL;
+        break;
+    case Activity::STOPWATCH:
+        newType = TT_ACTIVITY_STOPWATCH;
+        break;
+    case Activity::FREESTYLE:
+        newType = TT_ACTIVITY_FREESTYLE;
+        break;
+    default:
+        newType = TT_ACTIVITY_RUN;
+    }
+
+    if ( !ttbin.isOpen() || ! output.isOpen() || !output.isWritable() )
+    {
+        return false;
+    }
+
+    m_RecordLengths.clear();
+
+    quint8 tag;
+
+    while ( !ttbin.atEnd() )
+    {
+        if ( !ttbin.getChar((char*)&tag) )
+        {
+            qDebug() << "TTBinReader::updateActivityType / could not read tag.";
+            return false;
+        }
+
+        output.write((char*)&tag, 1);
+
+
+        if ( tag != TAG_FILE_HEADER )
+        {
+
+            if ( !m_RecordLengths.contains(tag) )
+            {
+                continue; //skipping.
+            }
+
+            if ( forgiving && m_RecordLengths.contains(tag))
+            {
+                int recordLength = m_RecordLengths[tag];
+                QByteArray data = ttbin.peek(recordLength+1);
+                if ( data.length() == recordLength + 1 )
+                {
+                    quint8 nextTag = (quint8)data.at(recordLength);
+                    if ( !m_RecordLengths.contains(nextTag))
+                    {
+                        // qDebug() << "This does not appear to be a valid record, skipping one.";
+                        continue;
+                    }
+                }
+            }
+        }
+
+        bool result = false;
+
+        switch ( tag )
+        {
+        case TAG_FILE_HEADER: // header;
+        {
+
+            if ( ttbin.pos() != 1 )
+            {
+                result = false;
+                break;
+            }
+
+            QByteArray copy;
+            result = readHeader(ttbin, ActivityPtr(), &copy);
+            if ( result )
+            {
+                output.write(copy);
+            }
+            break;
+        }
+        case TAG_SUMMARY:
+        {
+            QByteArray data;
+            result = skipTag(ttbin, tag, m_RecordLengths[tag], &data);
+            if ( result )
+            {
+                // adjust byte at 0.
+                data[0] = newType;
+                output.write(data);
+            }
+            break;
+        }
+
+        default:
+
+            if ( m_RecordLengths.contains( tag ) )
+            {
+                QByteArray data;
+                result = skipTag(ttbin, tag, m_RecordLengths[tag], &data);
+                if ( result )
+                {
+                    output.write(data);
+                }
+            }
+            else
+            {
+                result = false;
+                qWarning() << "TTBinReader::updateActivityType / unknown tag, bailing out. " << QString::number(tag,16) << ttbin.pos();
+            }
+        }
+
+        if ( !result )
+        {
+            qWarning() << "TTBinReader::updateActivityType / failed on tag, bailing out. " << QString::number(tag,16) << ttbin.pos();
+            return false;
+        }
+    }
+
+    return true;
 }

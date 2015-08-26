@@ -218,6 +218,11 @@ void TTWorkoutItem::setTag(bool tag)
     m_Tag = tag;
 }
 
+Activity::Sport TTWorkoutItem::sport() const
+{
+    return m_Sport;
+}
+
 
 TTWatchItem *WorkoutTreeModel::getWatchItem(const QString &name, bool * newlyCreated )
 {
@@ -594,6 +599,35 @@ TTWorkoutItem *WorkoutTreeModel::indexToWorkoutItem(QModelIndex &index)
         return 0;
     }
     return item;
+}
+
+bool WorkoutTreeModel::reloadIndex(QModelIndex &index)
+{
+    if ( !index.isValid() )
+    {
+        return false;
+    }
+    TTWorkoutItem * item = (TTWorkoutItem *)index.internalPointer();
+    if ( item->type() != TTItem::WorkoutItem )
+    {
+        return false;
+    }
+
+    TTBinReader br;
+    ActivityPtr a = br.read(item->filename(), true, true);
+    if ( a )
+    {
+        QTime t(0,0,0);
+        t = t.addSecs(a->duration());
+        item->set(a->date(), t, a->distance(),a->sport());
+        item->saveCache();
+    }
+    else
+    {
+        return false;
+    }
+    emit dataChanged(index,index);
+    return true;
 }
 
 void WorkoutTreeModel::fileSystemChanged()

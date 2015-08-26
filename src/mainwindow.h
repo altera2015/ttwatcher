@@ -91,6 +91,8 @@ private slots:
 
     void on_actionRescan_workout_directory_triggered();
 
+    void on_actionChange_Activity_Type_triggered();
+
 private:
     Ui::MainWindow *ui;
 };

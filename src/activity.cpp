@@ -54,7 +54,7 @@ QString Activity::sportToString(Activity::Sport sport)
     case RUNNING:
         return "Running";
     case TREADMILL:
-        return "Running";
+        return "Treadmill";
     case BIKING:
         return "Biking";
     case SWIMMING:

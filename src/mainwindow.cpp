@@ -531,6 +531,11 @@ MainWindow::MainWindow(QWidget *parent) :
         });
         ui->treeView->addAction(action);
     }
+    QAction * separator = new QAction(this);
+    separator->setSeparator(true);
+    ui->treeView->addAction( separator );
+    ui->treeView->addAction( ui->actionShow_in_explorer);
+    ui->treeView->addAction( ui->actionChange_Activity_Type);
 
 }
 
@@ -733,24 +738,30 @@ void MainWindow::on_treeView_clicked(const QModelIndex &index)
     processTTBin(item->filename());
 }
 
+// from http://stackoverflow.com/questions/9137692/qdesktopservicesopenurl-with-selecting-specified-file-in-explorer
 void selectFileInExplorer(const QString& path){
 #if defined(Q_OS_WIN)
     const QString explorer = "explorer";
-        QStringList param;
-        if (!QFileInfo(path).isDir())
-            param << QLatin1String("/select,");
-        param << QDir::toNativeSeparators(path);
-        QProcess::startDetached(explorer, param);
+    QStringList param;
+    if (!QFileInfo(path).isDir())
+    {
+        param << QLatin1String("/select,");
+    }
+    param << QDir::toNativeSeparators(path);
+    QProcess::startDetached(explorer, param);
 #elif defined(Q_OS_MAC)
     QStringList scriptArgs;
-        scriptArgs << QLatin1String("-e")
-                   << QString::fromLatin1("tell application \"Finder\" to reveal POSIX file \"%1\"")
-                                         .arg(path);
-        QProcess::execute(QLatin1String("/usr/bin/osascript"), scriptArgs);
-        scriptArgs.clear();
-        scriptArgs << QLatin1String("-e")
-                   << QLatin1String("tell application \"Finder\" to activate");
-        QProcess::execute("/usr/bin/osascript", scriptArgs);
+    scriptArgs << QLatin1String("-e")
+               << QString::fromLatin1("tell application \"Finder\" to reveal POSIX file \"%1\"")
+                  .arg(path);
+    QProcess::execute(QLatin1String("/usr/bin/osascript"), scriptArgs);
+    scriptArgs.clear();
+    scriptArgs << QLatin1String("-e")
+               << QLatin1String("tell application \"Finder\" to activate");
+    QProcess::execute("/usr/bin/osascript", scriptArgs);
+#elif defined(Q_OS_LINUX)
+    QFileInfo f(filename);
+    QDesktopServices::openUrl( QUrl::fromLocalFile(f.absolutePath()));
 #endif
 }
 
@@ -768,11 +779,8 @@ void MainWindow::on_actionShow_in_explorer_triggered()
     TTWorkoutItem * item = m_WorkoutTreeModel.indexToWorkoutItem(sourceIndex);
     if ( item != 0 )
     {
-        // QFileInfo f();
         filename = item->filename();
     }
-
-    // QDesktopServices::openUrl( QUrl::fromLocalFile(filename ) );
     selectFileInExplorer(filename);
 }
 
@@ -859,4 +867,85 @@ void MainWindow::on_actionDownload_from_watch_triggered()
 void MainWindow::on_actionRescan_workout_directory_triggered()
 {
     m_WorkoutTreeModel.rescan(false);
+}
+
+void MainWindow::on_actionChange_Activity_Type_triggered()
+{
+    QModelIndex index = ui->treeView->currentIndex();
+    if ( !index.isValid())
+    {
+        return;
+    }
+
+    QModelIndex sourceIndex = m_WorkoutSortingFilter.mapToSource(index);
+    TTWorkoutItem * item = m_WorkoutTreeModel.indexToWorkoutItem(sourceIndex);
+    if ( !item )
+    {
+        return;
+    }
+
+    QStringList types;
+    QMap<QString, Activity::Sport> tx;
+    int currentIndex = -1;
+    for (int i=(int)Activity::RUNNING;i<(int)Activity::OTHER;i++)
+    {
+        Activity::Sport sport = (Activity::Sport)i;
+        QString label = Activity::sportToString(sport);
+        types.append(label);
+        tx[label] = sport;
+        if ( item->sport() == sport )
+        {
+            currentIndex = types.count() - 1;
+        }
+    }
+
+    bool ok = false;
+    QString selected = QInputDialog::getItem(this, tr("Change activity type"), tr("Activity Type"), types, currentIndex, false, &ok);
+
+    if ( !tx.contains(selected) || !ok )
+    {
+        return;
+    }
+
+    Activity::Sport sport = tx[selected];
+
+    if ( item->sport() == sport )
+    {
+        ui->statusBar->showMessage(tr("Activity already set to that type."));
+        return;
+    }
+
+    TTBinReader br;
+
+    QFile input(item->filename());
+    if ( !input.open(QIODevice::ReadOnly) )
+    {
+        ui->statusBar->showMessage(tr("Failed to change activity type (input open failed)."));
+        return;
+    }
+
+    QFile output(item->filename() + ".2.ttbin");
+    if ( !output.open(QIODevice::WriteOnly))
+    {
+        ui->statusBar->showMessage(tr("Failed to change activity type (output open failed)."));
+        return;
+    }
+
+    if ( !br.updateActivityType(input, true, output, sport) )
+    {
+        ui->statusBar->showMessage(tr("Failed to change activity type"));
+        return;
+    }
+
+    input.close();
+    output.close();
+    input.rename( item->filename() + ".backup");
+    output.rename( item->filename() );
+    if ( !m_WorkoutTreeModel.reloadIndex(sourceIndex) )
+    {
+        output.remove();
+        input.rename( item->filename() );
+    }
+
+    ui->statusBar->showMessage(tr("Activity Type changed."));
 }

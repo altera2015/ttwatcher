@@ -120,6 +120,7 @@
     <addaction name="actionProcess_TTBIN"/>
     <addaction name="actionShow_in_explorer"/>
     <addaction name="actionSettings"/>
+    <addaction name="actionChange_Activity_Type"/>
     <addaction name="actionRescan_workout_directory"/>
     <addaction name="separator"/>
     <addaction name="actionExit"/>
@@ -321,6 +322,11 @@
   <action name="actionRescan_workout_directory">
    <property name="text">
     <string>Rescan workout directory</string>
+   </property>
+  </action>
+  <action name="actionChange_Activity_Type">
+   <property name="text">
+    <string>Change Activity Type...</string>
    </property>
   </action>
  </widget>

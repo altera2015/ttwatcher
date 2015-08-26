@@ -54,6 +54,7 @@ public:
     QString filename() const;
     bool tag() const;
     void setTag( bool tag);
+    Activity::Sport sport() const;
 
 };
 
@@ -90,6 +91,7 @@ public:
     static TTItem * indexToItem( QModelIndex & index );
     static TTWorkoutItem * indexToWorkoutItem( QModelIndex & index );
 
+    bool reloadIndex( QModelIndex & index );
 
 signals:
 

@@ -52,7 +52,8 @@ SOURCES += main.cpp\
     smashrunexporterconfig.cpp \
     watchexporters.cpp \
     exportworkingdialog.cpp \
-    centeredexpmovavg.cpp
+    centeredexpmovavg.cpp \
+    workouttreemodel.cpp
 
 win32:SOURCES+=hid.c
 unix:linux:SOURCES+=hidlinux.c
@@ -95,7 +96,8 @@ HEADERS  += mainwindow.h \
     smashrunexporterconfig.h \
     watchexporters.h \
     exportworkingdialog.h \
-    centeredexpmovavg.h
+    centeredexpmovavg.h \
+    workouttreemodel.h
 
 FORMS    += mainwindow.ui \
     settingsdialog.ui \

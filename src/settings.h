@@ -8,8 +8,12 @@
 class Settings : public QObject
 {
     Q_OBJECT
-public:
     explicit Settings(QObject *parent = 0);
+    static Settings * gSettings;
+public:
+
+    static Settings * get();
+    static void free();
 
     QString tileUrl() const;
     void setTileUrl( const QString & tileUrl );
@@ -27,6 +31,10 @@ public:
     void setQuickFixDate( const QString & serial, QDateTime t );
     QDateTime lastQuickFix( const QString & serial );
 
+    bool useMetric() const;
+    void setUseMetric( bool useMetric );
+
+
     void save();
     void load();
 
@@ -38,6 +46,7 @@ signals:
     void lastLongitudeChanged( double longitude );
     void lastZoomChanged( int zoom );
     void autoDownloadChanged( bool autoDownload );
+    void useMetricChanged(bool useMetric);
 
 private:
     QString m_TileUrl;
@@ -45,6 +54,7 @@ private:
     double m_LastLongitude;
     int m_LastZoom;
     bool m_AutoDownload;
+    bool m_UseMetric;
     QMap<QString, QDateTime> m_LastQuickFix;
     void saveQuickFix();
     void loadQuickFix();

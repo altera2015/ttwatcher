@@ -32,15 +32,24 @@ void ExportWorkingDialog::process()
     QStringList names;
     if ( m_Exporters->exportActivity(m_Activity, m_ExporterName, &names) )
     {
-        foreach ( const QString & name, names)
+        if ( names.length() == 0 )
         {
-            workInfo(tr("Exporting to %1").arg(name), false);
+            m_HadError = true;
+            workInfo(tr("No exporters configured, please set them up first under file->settings"), true);
         }
+        else
+        {
+            foreach ( const QString & name, names)
+            {
+                workInfo(tr("Exporting to %1").arg(name), false);
+            }
+        }
+
     }
     else
     {
-        workInfo(tr("Could not export"), true);
-        ui->cancelButton->setEnabled(true);
+        m_HadError = true;
+        workInfo(tr("Could not export"), true);        
     }
 }
 

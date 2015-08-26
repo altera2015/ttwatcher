@@ -30,8 +30,8 @@ class TTBinReader
 public:
     TTBinReader();
 
-    ActivityPtr read( QIODevice & ttbin, bool forgiving = false );
-    ActivityPtr read( const QString &filename, bool forgiving = false );
+    ActivityPtr read( QIODevice & ttbin, bool forgiving = false, bool headerAndSummaryOnly = false );
+    ActivityPtr read( const QString &filename, bool forgiving = false, bool headerAndSummaryOnly = false );
 
 
     static quint16 readquint16(const quint8 * data, int pos );

@@ -54,20 +54,6 @@ bool MainWindow::processTTBin(const QString& filename)
 
     ui->statusBar->showMessage(tr("Loading Elevation Data..."));
     m_ElevationLoader.load(a);
-
-    int distance = 0;
-
-    QTime t(0,0,0);
-    foreach ( LapPtr lap, a->laps())
-    {
-        distance += lap->length();
-        t = t.addSecs( lap->totalSeconds() );
-    }
-
-
-    QString stats = tr("Date: %1\nDistance: %2 m\nDuration: %3").arg(a->date().toString()).arg( distance ).arg(  t.toString( ));
-    ui->statLabel->setText(stats);
-
     return true;
 }
 
@@ -160,7 +146,14 @@ void MainWindow::onElevationLoaded(bool success, ActivityPtr activity)
 
             if ( success )
             {
-                altitude.add(tp->altitude());
+                if ( m_Settings->useMetric() )
+                {
+                    altitude.add(tp->altitude());
+                }
+                else
+                {
+                    altitude.add(tp->altitude()*3.28084);
+                }
             }
 
             if ( tp->heartRate() > 0 )
@@ -173,16 +166,56 @@ void MainWindow::onElevationLoaded(bool success, ActivityPtr activity)
                 heartBeat.add(lastHeart);
             }
 
-            speed.add(tp->speed() * 3.6);
+
+
+
 
             if ( m_Activity->sport() == Activity::RUNNING )
             {                
                 int c = qMin(4, tp->cadence());
                 cadence.add( 60 * c );
+
             }
             if ( m_Activity->sport() == Activity::BIKING )
             {                
                 cadence.add( tp->cadence() );
+
+
+                // use SPEED
+                if ( m_Settings->useMetric() )
+                {
+                    speed.add(tp->speed() * 3.6); // kmh
+                }
+                else
+                {
+                    speed.add(tp->speed() * 3.6 / 1.60934 ); // mph
+                }
+            }
+            else
+            {
+                // use pace
+                if ( m_Settings->useMetric() )
+                {
+                    if ( tp->speed() > 0 )
+                    {
+                        speed.add(60.0 / ( tp->speed() * 3.6) ); // kmh
+                    }
+                    else
+                    {
+                        speed.add(10);
+                    }
+                }
+                else
+                {
+                    if ( tp->speed() > 0 )
+                    {
+                        speed.add(60.0 / ( tp->speed() * 3.6 / 1.60934 ) ); // kmh
+                    }
+                    else
+                    {
+                        speed.add(16);
+                    }
+                }
             }
 
         }
@@ -233,8 +266,31 @@ void MainWindow::onElevationLoaded(bool success, ActivityPtr activity)
     ui->graph->yAxis->setBasePen( ui->graph->graph(0)->pen() );
     ui->graph->yAxis->setLabelColor( ui->graph->graph(0)->pen().color() );
 
-    ui->graph->yAxis2->setVisible(true);
-    ui->graph->yAxis2->setLabel("Speed [km/hr]");
+    if ( m_Activity->sport() == Activity::BIKING )
+    {
+        if ( m_Settings->useMetric())
+        {
+            ui->graph->yAxis2->setLabel("Speed [km/hr]");
+        }
+        else
+        {
+            ui->graph->yAxis2->setLabel("Speed [Mph]");
+        }
+        ui->graph->yAxis2->setRangeReversed(false);
+    }
+    else
+    {
+        if ( m_Settings->useMetric())
+        {
+            ui->graph->yAxis2->setLabel("Pace [min/km]");
+        }
+        else
+        {
+            ui->graph->yAxis2->setLabel("Pace [min/M]");
+        }
+        ui->graph->yAxis2->setRangeReversed(true);
+    }
+    ui->graph->yAxis2->setVisible(true);    
     ui->graph->yAxis2->setTickPen( ui->graph->graph(1)->pen() );
     ui->graph->yAxis2->setBasePen( ui->graph->graph(1)->pen() );
     ui->graph->yAxis2->setLabelColor( ui->graph->graph(1)->pen().color() );
@@ -244,7 +300,14 @@ void MainWindow::onElevationLoaded(bool success, ActivityPtr activity)
     m_Axis3->setBasePen( ui->graph->graph(2)->pen() );
     m_Axis3->setLabelColor( ui->graph->graph(2)->pen().color() );
 
-    m_Axis4->setLabel("Elevation [m]");
+    if ( m_Settings->useMetric())
+    {
+        m_Axis4->setLabel("Elevation [m]");
+    }
+    else
+    {
+        m_Axis4->setLabel("Elevation [ft]");
+    }
     m_Axis4->setTickPen( ui->graph->graph(3)->pen() );
     m_Axis4->setBasePen( ui->graph->graph(3)->pen() );
     m_Axis4->setLabelColor( ui->graph->graph(3)->pen().color() );
@@ -263,18 +326,8 @@ void MainWindow::onElevationLoaded(bool success, ActivityPtr activity)
     ui->graph->graph(2)->setVisible( ui->actionShow_Cadence->isChecked() );
     ui->graph->graph(3)->setVisible( ui->actionShow_Elevation->isChecked() );
 
-
-
-    /* Usefull to set all graphs to same y-axis range.
-    for (int i=0;i<=3;i++)
-    {
-        ui->graph->graph(i)->valueAxis()->setRangeLower(0.0);
-        ui->graph->graph(i)->valueAxis()->setRangeUpper(255);
-    }
-    */
-
     ui->graph->rescaleAxes();
-    ui->graph->graph(1)->valueAxis()->setRangeLower(0.0);
+    //ui->graph->graph(1)->valueAxis()->setRangeLower(0.0);
     ui->graph->graph(2)->valueAxis()->setRangeLower(0.0);
     ui->graph->graph(2)->valueAxis()->setRangeUpper(200);
 
@@ -339,29 +392,24 @@ void MainWindow::download(bool manualDownload)
     DownloadDialog * dd = findChild<DownloadDialog*>();
     if ( !dd )
     {
-        dd = new DownloadDialog(&m_Settings, &m_TTManager, this);
+        dd = new DownloadDialog(m_Settings, &m_TTManager, this);
     }
 
     if ( dd->processWatches(manualDownload) == QDialog::Accepted )
     {
-        // place the UI interaction on a slight delay to give the m_FSModel a chance
-        // to pick up the new files.
-        SingleShot::go([this, dd](){
-
-            QStringList files = dd->filesDownloaded();
-            if ( files.count() > 0 )
+        m_WorkoutTreeModel.rescan(false);
+        QStringList files = dd->filesDownloaded();
+        if ( files.count() > 0 )
+        {
+            QModelIndex index = m_WorkoutTreeModel.findWorkoutItem( files.first());
+            if ( index.isValid() )
             {
-                QModelIndex index = m_FSModel->index( files.first() );
-                if ( index.isValid() )
-                {
-                    ui->treeView->scrollTo(index);
-                    ui->treeView->setCurrentIndex(index);
-                    on_treeView_clicked(index);
-                }
+                QModelIndex proxyIndex = m_WorkoutSortingFilter.mapFromSource( index ) ;
+                ui->treeView->scrollTo( proxyIndex );
+                ui->treeView->setCurrentIndex(proxyIndex);
+                on_treeView_clicked(proxyIndex);
             }
-
-        }, 1000, true, this);
-
+        }
     }
 }
 
@@ -369,11 +417,11 @@ MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     m_Axis3(0),
     m_Axis4(0),
+    m_Settings( Settings::get() ),
+    m_WorkoutTreeModel(m_Settings->ttdir()),
     ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
-
-    m_Settings.load();
 
     setAcceptDrops(true);
 
@@ -392,24 +440,15 @@ MainWindow::MainWindow(QWidget *parent) :
 
     m_TTManager.startSearch();
 
-    m_FSModel = new QFileSystemModel(this);
-    FlatFileIconProvider * icons = new FlatFileIconProvider();
-    m_FSModel->setIconProvider(icons);
-    m_FSModel->setRootPath( Settings::ttdir() );
-    m_FSModel->setFilter(QDir::AllDirs|QDir::Files|QDir::NoDotAndDotDot);
-    QStringList fl;
-    fl.append("*.ttbin");
-    m_FSModel->setNameFilterDisables(false);
-    m_FSModel->setNameFilters(fl);
-    ui->treeView->setModel(m_FSModel);
-
-    QModelIndex idx = m_FSModel->index( Settings::ttdir() );
-    ui->treeView->setRootIndex(idx);
-    ui->treeView->hideColumn(3);
-    ui->treeView->hideColumn(2);
-    ui->treeView->hideColumn(1);
-
-
+    m_WorkoutSortingFilter.setSortRole(Qt::UserRole);
+    m_WorkoutSortingFilter.setSourceModel(&m_WorkoutTreeModel);
+    ui->treeView->setModel( & m_WorkoutSortingFilter );
+    ui->treeView->sortByColumn(0,Qt::DescendingOrder);
+    ui->treeView->expandAll();
+    ui->treeView->resizeColumnToContents(0);
+    ui->treeView->resizeColumnToContents(1);
+    ui->treeView->resizeColumnToContents(2);
+    ui->treeView->resizeColumnToContents(3);
 
     m_TileCombo = new QComboBox;
     ui->toolBar->addSeparator();
@@ -433,7 +472,7 @@ MainWindow::MainWindow(QWidget *parent) :
                 QJsonObject entry = v.toObject();
                 m_TileCombo->addItem( entry["name"].toString(), entry);
 
-                if ( entry["url"].toString() == m_Settings.tileUrl() )
+                if ( entry["url"].toString() == m_Settings->tileUrl() )
                 {
                     tileSelectIndex = tileIndex;
                 }
@@ -453,7 +492,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(m_TileCombo,SIGNAL(currentIndexChanged(int)), this, SLOT(onTileChanged()));
 
 
-    ui->mapWidget->setCenter(m_Settings.lastZoom(), m_Settings.lastLatitude(), m_Settings.lastLongitude());
+    ui->mapWidget->setCenter(m_Settings->lastZoom(), m_Settings->lastLatitude(), m_Settings->lastLongitude());
 
 
 #ifdef WIN32
@@ -499,16 +538,16 @@ void MainWindow::onTileChanged()
 {
     QJsonObject o = m_TileCombo->currentData().toJsonObject();
     ui->mapWidget->setTilePath(o["url"].toString(), o["copyright"].toString());
-    m_Settings.setTileUrl(o["url"].toString());
-    m_Settings.save();
+    m_Settings->setTileUrl(o["url"].toString());
+    m_Settings->save();
 }
 
 MainWindow::~MainWindow()
 {
-    m_Settings.setLastLatitude( ui->mapWidget->latitude() );
-    m_Settings.setLastLongitude( ui->mapWidget->longitude() );
-    m_Settings.setLastZoom( ui->mapWidget->zoom() );
-    m_Settings.save();
+    m_Settings->setLastLatitude( ui->mapWidget->latitude() );
+    m_Settings->setLastLongitude( ui->mapWidget->longitude() );
+    m_Settings->setLastZoom( ui->mapWidget->zoom() );
+    m_Settings->save();
     delete ui;
 }
 
@@ -545,9 +584,6 @@ void MainWindow::exportActivity(const QString &exporterName)
     {
         return;
     }
-
-
-
 
     QString filename = m_Activity->filename();
 
@@ -607,7 +643,7 @@ void MainWindow::onWatchArrived()
 
 void MainWindow::onWatchArrivedDelay()
 {
-    if ( !m_Settings.autoDownload() )
+    if ( !m_Settings->autoDownload() )
     {
         return;
     }
@@ -686,28 +722,37 @@ void MainWindow::on_treeView_clicked(const QModelIndex &index)
         return;
     }
 
-    if ( m_FSModel->isDir(index) )
+    QModelIndex sourceIndex = m_WorkoutSortingFilter.mapToSource(index);
+
+    TTWorkoutItem * item = m_WorkoutTreeModel.indexToWorkoutItem(sourceIndex);
+    if ( item == 0 )
     {
         return;
     }
 
-    QFileInfo fi = m_FSModel->fileInfo(index);
-
-    processTTBin(fi.filePath());
+    processTTBin(item->filename());
 }
 
 
 
 void MainWindow::on_actionShow_in_explorer_triggered()
-{
-    QModelIndex index = ui->treeView->currentIndex();
-
+{    
     QString filename = Settings::ttdir();
-    if ( index.isValid() )
+    QModelIndex index = ui->treeView->currentIndex();
+    if ( !index.isValid() )
     {
-        QFileInfo f = m_FSModel->fileInfo( index );
+        return;
+    }
+    QModelIndex sourceIndex = m_WorkoutSortingFilter.mapToSource(index);
+
+    // if user selected a workout point to that otherwise just open TT directory.
+    TTWorkoutItem * item = m_WorkoutTreeModel.indexToWorkoutItem(sourceIndex);
+    if ( item != 0 )
+    {
+        QFileInfo f(item->filename());
         filename = f.absolutePath();
     }
+
     QDesktopServices::openUrl( QUrl::fromLocalFile(filename ) );
 }
 
@@ -779,7 +824,7 @@ void MainWindow::on_actionSettings_triggered()
     SettingsDialog * s = findChild<SettingsDialog*>();
     if ( !s )
     {
-        s = new SettingsDialog (&m_Settings, &m_TTManager, this);
+        s = new SettingsDialog (m_Settings, &m_TTManager, this);
     }
 
     s->show();
@@ -789,4 +834,9 @@ void MainWindow::on_actionSettings_triggered()
 void MainWindow::on_actionDownload_from_watch_triggered()
 {
     download(true);
+}
+
+void MainWindow::on_actionRescan_workout_directory_triggered()
+{
+    m_WorkoutTreeModel.rescan(false);
 }

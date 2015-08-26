@@ -5,12 +5,14 @@
 #include <QFileSystemModel>
 #include <QTimer>
 #include <QAbstractNativeEventFilter>
+#include <QSortFilterProxyModel>
 
 #include "ttmanager.h"
 #include "activity.h"
 #include "qcustomplot.h"
 #include "elevationloader.h"
 #include "settings.h"
+#include "workouttreemodel.h"
 
 namespace Ui {
 class MainWindow;
@@ -32,9 +34,11 @@ class MainWindow : public QMainWindow, public QAbstractNativeEventFilter
     QCPAxis * m_Axis4;
     ElevationLoader m_ElevationLoader;
     QComboBox * m_TileCombo;
-    Settings m_Settings;
+    Settings * m_Settings;
     QTimer m_WatchTimer;
     QTimer m_DeviceArriveDebounce;
+    WorkoutTreeModel m_WorkoutTreeModel;
+    QSortFilterProxyModel m_WorkoutSortingFilter;
 
     void dragEnterEvent(QDragEnterEvent *e);
     void dropEvent(QDropEvent *e);
@@ -84,6 +88,8 @@ private slots:
     void on_actionSettings_triggered();
 
     void on_actionDownload_from_watch_triggered();
+
+    void on_actionRescan_workout_directory_triggered();
 
 private:
     Ui::MainWindow *ui;

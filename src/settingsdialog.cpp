@@ -17,6 +17,7 @@ SettingsDialog::SettingsDialog(Settings *settings, TTManager * ttManager, QWidge
     connect(ui->autoOpenCheckBox, SIGNAL(clicked()), this, SLOT(onExporterChanged()));
 
     connect(ui->autoDownloadCheckbox, SIGNAL(clicked()), this, SLOT(onSettingChanged()));
+    connect(ui->useMetricCheckBox, SIGNAL(clicked()), this, SLOT(onSettingChanged()));
 
 
     ui->okButton->setEnabled(false);
@@ -80,6 +81,7 @@ void SettingsDialog::display()
 
 
     ui->autoDownloadCheckbox->setChecked( m_Settings->autoDownload() );
+    ui->useMetricCheckBox->setChecked( m_Settings->useMetric() );
 }
 
 void SettingsDialog::displayWatchPreferences()
@@ -152,6 +154,7 @@ void SettingsDialog::onExporterChanged()
 void SettingsDialog::onSettingChanged()
 {
     m_Settings->setAutoDownload( ui->autoDownloadCheckbox->isChecked() );
+    m_Settings->setUseMetric( ui->useMetricCheckBox->isChecked() );
     ui->okButton->setEnabled(true);
 }
 

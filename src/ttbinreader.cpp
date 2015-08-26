@@ -31,6 +31,7 @@
 #define TAG_RACE_RESULT         (0x3d)
 #define TAG_ALTITUDE_UPDATE     (0x3e)  // OK
 #define TAG_HEART_RATE_RECOVERY (0x3f)  // OK
+#define TAG_UNHANDLED           (0xff)
 
 // Activities:
 #define TT_ACTIVITY_RUN         0
@@ -418,6 +419,10 @@ bool TTBinReader::readSummary(QIODevice &ttbin, ActivityPtr activity)
     lap->setLength( readFloat(data, 1));
     lap->setTotalSeconds( readquint32(data, 5) );*/
 
+    activity->setDistance(readFloat(data, 1));
+    activity->setDuration( readquint32(data,5));
+
+
     LapPtr lap = activity->laps().first();
     lap->setCalories( readquint16( data, 9 ));
 
@@ -556,11 +561,6 @@ bool TTBinReader::skipTag(QIODevice &ttbin, quint8 tag, int size)
         return false;
     }
 
-    if ( tag != 0x23 )
-    {
-        qWarning() << "TTBinReader::skipTag / skipping tag " << QString::number(tag,16) << size << data.toHex();
-    }
-
     return true;
 }
 
@@ -570,7 +570,7 @@ TTBinReader::TTBinReader()
 
 
 
-ActivityPtr TTBinReader::read(QIODevice &ttbin, bool forgiving)
+ActivityPtr TTBinReader::read(QIODevice &ttbin, bool forgiving, bool headerAndSummaryOnly)
 {
     if ( !ttbin.isOpen() )
     {
@@ -608,7 +608,7 @@ ActivityPtr TTBinReader::read(QIODevice &ttbin, bool forgiving)
                     quint8 nextTag = (quint8)data.at(recordLength);
                     if ( !m_RecordLengths.contains(nextTag))
                     {
-                        qDebug() << "This does not appear to be a valid record, skipping one.";
+                        // qDebug() << "This does not appear to be a valid record, skipping one.";
                         continue;
                     }
                 }
@@ -617,7 +617,18 @@ ActivityPtr TTBinReader::read(QIODevice &ttbin, bool forgiving)
 
         bool result = false;
 
-        switch ( tag )
+
+        quint8 switchTag = tag;
+
+        if ( headerAndSummaryOnly )
+        {
+            if ( switchTag != TAG_FILE_HEADER && switchTag != TAG_SUMMARY )
+            {
+                switchTag = TAG_UNHANDLED;
+            }
+        }
+
+        switch ( switchTag )
         {
         case TAG_FILE_HEADER: // header;
             if ( ttbin.pos() == 1 )
@@ -628,7 +639,7 @@ ActivityPtr TTBinReader::read(QIODevice &ttbin, bool forgiving)
             {
                 if ( forgiving )
                 {
-                    qDebug() << "TTBinReader::read / got header not at start skipping.";
+                    // qDebug() << "TTBinReader::read / got header not at start skipping.";
                     result = true;
                 }
                 else
@@ -639,6 +650,10 @@ ActivityPtr TTBinReader::read(QIODevice &ttbin, bool forgiving)
             }
 
             break;
+        case TAG_SUMMARY: // summary at end.
+            result = readSummary(ttbin, ap);
+            break;
+
         case TAG_STATUS: // lap.
             result = readStatus(ttbin, ap);
             break;
@@ -647,9 +662,6 @@ ActivityPtr TTBinReader::read(QIODevice &ttbin, bool forgiving)
             break;
         case TAG_HEART_RATE: // heart rate on Cardio Models
             result = readHeartRate(ttbin, ap);
-            break;
-        case TAG_SUMMARY: // summary at end.
-            result = readSummary(ttbin, ap);
             break;
         case TAG_TREADMILL:
             result = readTreadmill(ttbin, ap);
@@ -692,14 +704,14 @@ ActivityPtr TTBinReader::read(QIODevice &ttbin, bool forgiving)
     return ap;
 }
 
-ActivityPtr TTBinReader::read(const QString &filename, bool forgiving)
+ActivityPtr TTBinReader::read(const QString &filename, bool forgiving, bool headerAndSummaryOnly)
 {
     QFile f(filename);
     if ( !f.open(QIODevice::ReadOnly))
     {
         return ActivityPtr();
     }
-    ActivityPtr a = read(f,forgiving);
+    ActivityPtr a = read(f,forgiving, headerAndSummaryOnly);
     a->setFilename(filename);
     return a;
 }

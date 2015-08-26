@@ -13,6 +13,8 @@ unix:macx:QMAKE_CXXFLAGS+= -stdlib=libc++
 unix:macx:CONFIG+=c++11
 unix:macx:ICON=runningman2.icns
 unix:macx:QMAKE_INFO_PLIST=Info.plist
+# rebuild on OSX actually delete the build dir if you get odd errors about incorrect Qt versions.
+# deploy on osx ~/Qt/5.4/clang_64/bin/macdeployqt ttwatcher.app -dmg
 
 
 #DEFINES+=USE_DEBUG_PROXY

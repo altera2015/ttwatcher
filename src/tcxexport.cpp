@@ -1,6 +1,7 @@
 #include "tcxexport.h"
 #include <QDebug>
 #include <centeredexpmovavg.h>
+#include <math.h>
 
 // http://www.utilities-online.info/xsdvalidation/?save=dbdfe5b3-b776-4e28-8964-3f17c1b54a1c-xsdvalidation
 

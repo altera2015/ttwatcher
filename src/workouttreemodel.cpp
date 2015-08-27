@@ -364,7 +364,7 @@ void WorkoutTreeModel::process(const QString &filename, bool full)
     {
         if ( newlyCreated )
         {
-            beginInsertRows(QModelIndex(),m_WatchItems.count()+1,m_WatchItems.count()+1);
+            beginInsertRows(QModelIndex(),m_WatchItems.count(),m_WatchItems.count());
         }
         else
         {

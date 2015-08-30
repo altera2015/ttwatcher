@@ -11,6 +11,7 @@
 #include <QDir>
 #include <QStringList>
 #include <QMessageBox>
+
 #include "singleshot.h"
 #include "ttbinreader.h"
 #include "elevationloader.h"
@@ -102,6 +103,8 @@ void DownloadDialog::process()
 
         if ( files.count() > 0 )
         {
+            emit filesAvailable();
+
             workInfo(tr("Exporting .ttbins"), false);
 
             /**********************************************/

@@ -6,6 +6,7 @@
 #include <QTimer>
 #include <QAbstractNativeEventFilter>
 #include <QSortFilterProxyModel>
+#include <QSystemTrayIcon>
 
 #include "ttmanager.h"
 #include "activity.h"
@@ -39,17 +40,25 @@ class MainWindow : public QMainWindow, public QAbstractNativeEventFilter
     QTimer m_DeviceArriveDebounce;
     WorkoutTreeModel m_WorkoutTreeModel;
     QSortFilterProxyModel m_WorkoutSortingFilter;
+    bool m_MayClose;
+    QSystemTrayIcon * m_TrayIcon;
 
     void dragEnterEvent(QDragEnterEvent *e);
     void dropEvent(QDropEvent *e);
     void download(bool manualDownload);
+    void closeEvent (QCloseEvent *event);
+
 public:
     explicit MainWindow(QWidget *parent = 0);
     ~MainWindow();
 
     virtual bool nativeEventFilter(const QByteArray &eventType, void *message, long *l);
+public slots:
+    void onMessage(QString messageReceived);
+    void onCommitDataRequest(QSessionManager & manager);
+    void onTrayIconActivated(QSystemTrayIcon::ActivationReason reason);
 private slots:
-
+    void showMe();
     void exportActivity( const QString & exporterName );
 
     void onTileChanged();

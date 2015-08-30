@@ -1,5 +1,80 @@
 #include "settingsdialog.h"
 #include "ui_settingsdialog.h"
+#include <QSettings>
+#include <QDir>
+#include <QFile>
+#include <QDebug>
+
+bool SettingsDialog::isStartOnLogin()
+{
+    //http://stackoverflow.com/questions/3358410/programmatically-run-at-startup-on-mac-os-x
+#ifdef Q_WS_MAC
+    QFile f("~/Library/LaunchAgents/ttwatcher.plist");
+    return f.exists();
+#endif
+#ifdef WIN32
+    QSettings s("HKEY_CURRENT_USER\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run",  QSettings::NativeFormat );
+    return s.contains("ttwatcher");
+#endif
+}
+
+void SettingsDialog::setStartOnLogin(bool start)
+{
+#ifdef Q_WS_MAC
+    QFile f("~/Library/LaunchAgents/ttwatcher.plist");
+
+    if ( start )
+    {
+        if ( !f.open(QIODevice::WriteOnly))
+        {
+            qWarning() << "Could not save ttwatcher.plist.";
+            return;
+        }
+        QString x = qApp->applicationFilePath();
+        x = QDir::toNativeSeparators(x);
+        QString plist = QString("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+                            "<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n"
+                            "<plist version=\"1.0\">\n"
+                            "<dict>\n"
+                                "\t<key>Label</key>\n"
+                                "\t<string>ttwatcher</string>\n"
+                                "\t<key>ProgramArguments</key>\n"
+                                "\t<array>\n"
+                                "\t\t<string>%1</string>\n"
+                                "\t\t<string>--hidden</string>\n"
+                                "\t</array>\n"
+                                "\t<key>ProcessType</key>\n"
+                                "\t<string>Interactive</string>\n"
+                                "\t<key>RunAtLoad</key>\n"
+                                "\t<true/>\n"
+                                "\t<key>KeepAlive</key>\n"
+                                "\t<false/>\n"
+                            "</dict>\n"
+                            "</plist>\n").arg(x);
+        f.write(plist.toUtf8());
+        f.close();
+    }
+    else
+    {
+        f.remove();
+    }
+#endif
+#ifdef WIN32
+    QSettings s("HKEY_CURRENT_USER\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run",  QSettings::NativeFormat );
+
+    if ( start )
+    {
+        QString x = qApp->applicationFilePath();
+        x = "\"" + QDir::toNativeSeparators(x) + "\" --hidden";
+
+        s.setValue("ttwatcher", x);
+    }
+    else
+    {
+        s.remove("ttwatcher");
+    }
+#endif
+}
 
 SettingsDialog::SettingsDialog(Settings *settings, TTManager * ttManager, QWidget *parent) :
     QDialog(parent),
@@ -8,6 +83,7 @@ SettingsDialog::SettingsDialog(Settings *settings, TTManager * ttManager, QWidge
     ui(new Ui::SettingsDialog)
 {
     ui->setupUi(this);
+
     display();
 
     connect(ttManager, SIGNAL(ttArrived(QString)), this, SLOT(display()));
@@ -18,7 +94,7 @@ SettingsDialog::SettingsDialog(Settings *settings, TTManager * ttManager, QWidge
 
     connect(ui->autoDownloadCheckbox, SIGNAL(clicked()), this, SLOT(onSettingChanged()));
     connect(ui->useMetricCheckBox, SIGNAL(clicked()), this, SLOT(onSettingChanged()));
-
+    connect(ui->startUponLoginCheckbox, SIGNAL(clicked()), this, SLOT(onSettingChanged()));
 
     ui->okButton->setEnabled(false);
 
@@ -82,6 +158,8 @@ void SettingsDialog::display()
 
     ui->autoDownloadCheckbox->setChecked( m_Settings->autoDownload() );
     ui->useMetricCheckBox->setChecked( m_Settings->useMetric() );
+
+    ui->startUponLoginCheckbox->setChecked( isStartOnLogin());
 }
 
 void SettingsDialog::displayWatchPreferences()
@@ -156,6 +234,7 @@ void SettingsDialog::onSettingChanged()
     m_Settings->setAutoDownload( ui->autoDownloadCheckbox->isChecked() );
     m_Settings->setUseMetric( ui->useMetricCheckBox->isChecked() );
     ui->okButton->setEnabled(true);
+    setStartOnLogin( ui->startUponLoginCheckbox->isChecked());
 }
 
 void SettingsDialog::on_setupButton_clicked()

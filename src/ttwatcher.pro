@@ -55,11 +55,14 @@ SOURCES += main.cpp\
     watchexporters.cpp \
     exportworkingdialog.cpp \
     centeredexpmovavg.cpp \
-    workouttreemodel.cpp
+    workouttreemodel.cpp \
+    qtsingleapplication.cpp \
+    qtlocalpeer.cpp \
+    qtlockedfile.cpp
 
-win32:SOURCES+=hid.c
-unix:linux:SOURCES+=hidlinux.c
-unix:macx:SOURCES+=hidmac.c
+win32:SOURCES+=hid.c qtlockedfile_win.cpp
+unix:linux:SOURCES+=hidlinux.c qtlockedfile_unix.cpp
+unix:macx:SOURCES+=hidmac.c qtlockedfile_unix.cpp
 
 HEADERS  += mainwindow.h \
     hidapi.h \
@@ -99,7 +102,10 @@ HEADERS  += mainwindow.h \
     watchexporters.h \
     exportworkingdialog.h \
     centeredexpmovavg.h \
-    workouttreemodel.h
+    workouttreemodel.h \
+    qtsingleapplication.h \
+    qtlocalpeer.h \
+    qtlockedfile.h
 
 FORMS    += mainwindow.ui \
     settingsdialog.ui \

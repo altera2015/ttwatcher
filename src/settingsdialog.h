@@ -15,6 +15,8 @@ class SettingsDialog : public QDialog
     Settings * m_Settings;
     TTManager * m_TTManager;
 
+    bool isStartOnLogin();
+    void setStartOnLogin(bool start);
 public:
     explicit SettingsDialog(Settings * settings, TTManager * ttManager, QWidget *parent = 0);
     ~SettingsDialog();

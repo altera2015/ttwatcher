@@ -28,6 +28,8 @@ public:
     ~DownloadDialog();
     int processWatches(bool manualDownload);
     QStringList filesDownloaded() const;
+signals:
+    void filesAvailable();
 private slots:
     void process();
     void workInfo( const QString & message, bool done );

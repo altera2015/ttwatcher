@@ -13,7 +13,8 @@
 #include <QJsonObject>
 #include <QAbstractEventDispatcher>
 #include <QMenu>
-
+#include <QEvent>
+#include <QIcon>
 
 #include "exportworkingdialog.h"
 #include "flatfileiconprovider.h"
@@ -393,6 +394,13 @@ void MainWindow::download(bool manualDownload)
     if ( !dd )
     {
         dd = new DownloadDialog(m_Settings, &m_TTManager, this);
+
+        connect(dd, &DownloadDialog::filesAvailable, [this](){
+            if ( isHidden() )
+            {
+                showMe();
+            }
+        });
     }
 
     if ( dd->processWatches(manualDownload) == QDialog::Accepted )
@@ -413,12 +421,27 @@ void MainWindow::download(bool manualDownload)
     }
 }
 
+void MainWindow::closeEvent(QCloseEvent *event)
+{
+    if ( !m_MayClose )
+    {
+        hide();
+        event->ignore();
+    }
+    else
+    {
+        qApp->setQuitOnLastWindowClosed(true);
+        QMainWindow::closeEvent(event);
+    }
+}
+
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     m_Axis3(0),
     m_Axis4(0),
     m_Settings( Settings::get() ),
     m_WorkoutTreeModel(m_Settings->ttdir()),
+    m_MayClose(false),
     ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
@@ -498,7 +521,7 @@ MainWindow::MainWindow(QWidget *parent) :
 #ifdef WIN32
 
     connect(&m_DeviceArriveDebounce, SIGNAL(timeout()), &m_TTManager, SLOT(checkForTTs()));
-    m_DeviceArriveDebounce.setInterval(500);
+    m_DeviceArriveDebounce.setInterval(5000);//not too fast, windows makes stuff arrive and disappear and arrive again.
     m_DeviceArriveDebounce.setSingleShot(true);
 
     QAbstractEventDispatcher::instance()->installNativeEventFilter(this);
@@ -537,6 +560,18 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->treeView->addAction( ui->actionShow_in_explorer);
     ui->treeView->addAction( ui->actionChange_Activity_Type);
 
+    m_TrayIcon = new QSystemTrayIcon(this);
+    m_TrayIcon->setIcon( QIcon(":/icons/man360.png"));
+    m_TrayIcon->setVisible(true);
+    connect(m_TrayIcon, SIGNAL(activated(QSystemTrayIcon::ActivationReason)), this, SLOT(onTrayIconActivated(QSystemTrayIcon::ActivationReason)));
+
+    QMenu * trayMenu = new QMenu(this);
+    QAction * show = new QAction(tr("Show ttwatcher"), this);
+    connect(show, SIGNAL(triggered()), this, SLOT(showMe()));
+    trayMenu->addAction(show);
+    trayMenu->addAction(ui->actionExit);
+    m_TrayIcon->setContextMenu(trayMenu);
+    m_TrayIcon->setToolTip(tr("ttwatcher"));
 }
 
 void MainWindow::onTileChanged()
@@ -580,6 +615,38 @@ bool MainWindow::nativeEventFilter(const QByteArray &eventType, void *message, l
 #else
     return false;
 #endif
+}
+
+void MainWindow::onMessage(QString messageReceived)
+{
+    showMe();
+}
+
+void MainWindow::onCommitDataRequest(QSessionManager &manager)
+{
+    m_MayClose = true;
+}
+
+void MainWindow::onTrayIconActivated(QSystemTrayIcon::ActivationReason reason)
+{
+    switch ( reason )
+    {
+    case QSystemTrayIcon::DoubleClick:
+    case QSystemTrayIcon::Trigger:
+        showMe();
+        break;
+    }
+}
+
+void MainWindow::showMe()
+{
+    if ( isMinimized() )
+    {
+        showNormal();
+    }
+    show();
+    raise();
+    activateWindow();
 }
 
 
@@ -652,6 +719,7 @@ void MainWindow::onWatchArrivedDelay()
     {
         return;
     }
+
     download(false);
 }
 
@@ -718,6 +786,7 @@ void MainWindow::on_actionProcess_TTBIN_triggered()
 
 void MainWindow::on_actionExit_triggered()
 {
+    m_MayClose = true;
     close();
 }
 void MainWindow::on_treeView_clicked(const QModelIndex &index)

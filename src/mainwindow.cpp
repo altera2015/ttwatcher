@@ -829,8 +829,8 @@ void selectFileInExplorer(const QString& path){
                << QLatin1String("tell application \"Finder\" to activate");
     QProcess::execute("/usr/bin/osascript", scriptArgs);
 #elif defined(Q_OS_LINUX)
-    QFileInfo f(filename);
-    QDesktopServices::openUrl( QUrl::fromLocalFile(f.absolutePath()));
+    QFileInfo f(path);
+    QDesktopServices::openUrl(QUrl::fromLocalFile(f.absolutePath()));
 #endif
 }
 

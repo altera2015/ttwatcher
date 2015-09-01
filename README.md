@@ -77,6 +77,7 @@ Using Qt version 5.2.1 in /usr/lib/x86_64-linux-gnu
 $ cd ttwatcher/src
 $ cp strava_auth.h.orig strava_auth.h
 $ cp runkeeper_auth.h.orig runkeeper_auth.h
+$ cp smashrun_auth.h.orig smashrun_auth.h
 ```
 
 Build from CLI:

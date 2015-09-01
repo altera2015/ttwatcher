@@ -11,7 +11,7 @@ class Activity
 {
 
 public:
-    enum Sport { RUNNING, TREADMILL, BIKING, SWIMMING, OTHER };
+    enum Sport { RUNNING, TREADMILL, BIKING, SWIMMING, STOPWATCH, FREESTYLE, OTHER };
 
     Activity();
 
@@ -23,18 +23,28 @@ public:
     Sport sport() const;
     void setSport(Sport sport);
     QString sportString() const;    
+    static QString sportToString( Sport sport );
+
     void setFilename( const QString & filename);
     QString filename() const;
 
     QString toString() const;
     TrackPointPtr find( int secondsSinceStart );
 
+    void setDistance( float distance );
+    float distance() const;
+    void setDuration( quint32 duration);
+    quint32 duration() const;
+
+
 private:
     LapList m_Laps;
-    QDateTime m_Date;
+    QDateTime m_Date;    
     QString m_Notes;
     Sport m_Sport;
     QString m_Filename;
+    quint32 m_Duration;
+    float m_Distance;
 
 };
 

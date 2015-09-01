@@ -1,13 +1,12 @@
 #include "tcxactivityexporter.h"
 #include "tcxexport.h"
 #include <QFile>
-#include "watchpreferences.h"
+#include "watchexporters.h"
 
-TCXActivityExporter::TCXActivityExporter(QObject *parent) :
+TCXActivityExporter::TCXActivityExporter(const QString &serial, QObject *parent) :
     IActivityExporter(parent),
-    m_Enabled(false),
-    m_AutoOpen(false),
-    m_Icon(":/icons/tcx.png")
+    m_Icon(":/icons/tcx.png"),
+    m_Config(serial)
 {
 }
 
@@ -16,51 +15,9 @@ QString TCXActivityExporter::name() const
     return "TCX";
 }
 
-bool TCXActivityExporter::loadConfig(const WatchPreferences &preferences, QDomElement element)
-{
-    Q_UNUSED(preferences);
-    parseExportTag(element, "TCX", m_Enabled, m_AutoOpen);
-    setChanged(false);
-    return true;
-}
-
-bool TCXActivityExporter::isEnabled() const
-{
-    return m_Enabled;
-}
-
-void TCXActivityExporter::setEnabled(bool enabled)
-{
-    if ( m_Enabled != enabled )
-    {
-        m_Enabled = enabled;
-        setChanged(true);
-    }
-}
-
-bool TCXActivityExporter::isOnline() const
-{
-    return false;
-}
-
-bool TCXActivityExporter::autoOpen() const
-{
-    return false;
-}
-
-void TCXActivityExporter::setAutoOpen(bool autoOpen)
-{
-    Q_UNUSED(autoOpen);
-}
-
 QIcon TCXActivityExporter::icon() const
 {
     return m_Icon;
-}
-
-void TCXActivityExporter::reset()
-{
-
 }
 
 bool TCXActivityExporter::hasSetup() const
@@ -73,12 +30,16 @@ void TCXActivityExporter::setup(QWidget *parent)
     Q_UNUSED(parent);
 }
 
-void TCXActivityExporter::saveConfig(const WatchPreferences &preferences, QDomDocument &document, QDomElement &element)
+IExporterConfig &TCXActivityExporter::config()
 {
-    Q_UNUSED(preferences);
-    writeExportTag(document, element, "TCX", m_Enabled, m_AutoOpen);
-    setChanged(false);
+    return m_Config;
 }
+
+IExporterConfig * TCXActivityExporter::createConfig()
+{
+    return new TCXExporterConfig( m_Config.serial() );
+}
+
 
 void TCXActivityExporter::exportActivity(ActivityPtr activity)
 {
@@ -92,11 +53,11 @@ void TCXActivityExporter::exportActivity(ActivityPtr activity)
     QFile f( activity->filename() + ".tcx");
     if ( !f.open(QIODevice::WriteOnly) )
     {
-        emit exportFinished(false, tr("Could not write tcx file %1.").arg(f.fileName()), QUrl());
+        emit exportFinished(false, tr("TCX: Could not write file %1.").arg(f.fileName()), QUrl());
         return;
     }
 
     e.save(&f, activity);
     f.close();
-    emit exportFinished(true, tr("TCX Export success."), QUrl::fromLocalFile( f.fileName() ));
+    emit exportFinished(true, tr("TCX: Export success."), QUrl::fromLocalFile( f.fileName() ));
 }

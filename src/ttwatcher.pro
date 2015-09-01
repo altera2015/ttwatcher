@@ -7,7 +7,17 @@ win32:LIBS +=-lUser32 -lPsapi -lhid -lsetupapi
 win32:RC_FILE = ttwatcher.rc
 linux:CONFIG += c++11
 linux:LIBS +=-lusb-1.0
+unix:macx:CONFIG += app_bundle
+unix:macx:LIBS+=-framework IOKit -framework CoreFoundation
+unix:macx:QMAKE_CXXFLAGS+= -stdlib=libc++
+unix:macx:CONFIG+=c++11
+unix:macx:ICON=runningman2.icns
+unix:macx:QMAKE_INFO_PLIST=Info.plist
+# rebuild on OSX actually delete the build dir if you get odd errors about incorrect Qt versions.
+# deploy on osx ~/Qt/5.4/clang_64/bin/macdeployqt ttwatcher.app -dmg
 
+
+#DEFINES+=USE_DEBUG_PROXY
 DEFINES+=Q_HTTP_STATIC_BUILD
 
 SOURCES += main.cpp\
@@ -24,7 +34,6 @@ SOURCES += main.cpp\
     tcxexport.cpp \
     qcustomplot.cpp \
     elevationloader.cpp \
-    watchpreferences.cpp \
     iactivityexporter.cpp \
     stravaexporter.cpp \
     httpserver.cpp \
@@ -36,11 +45,24 @@ SOURCES += main.cpp\
     settings.cpp \
     aboutdialog.cpp \
     downloaddialog.cpp \
-    runkeeperexporter.cpp
+    runkeeperexporter.cpp \
+    smashrunexporter.cpp \
+    iexporterconfig.cpp \
+    stravaexporterconfig.cpp \
+    tcxexporterconfig.cpp \
+    runkeeperexporterconfig.cpp \
+    smashrunexporterconfig.cpp \
+    watchexporters.cpp \
+    exportworkingdialog.cpp \
+    centeredexpmovavg.cpp \
+    workouttreemodel.cpp \
+    qtsingleapplication.cpp \
+    qtlocalpeer.cpp \
+    qtlockedfile.cpp
 
-win32:SOURCES+=hid.c
-unix:linux:SOURCES+=hidlinux.c
-unix:macx:SOURCES+=hidmac.c
+win32:SOURCES+=hid.c qtlockedfile_win.cpp
+unix:linux:SOURCES+=hidlinux.c qtlockedfile_unix.cpp
+unix:macx:SOURCES+=hidmac.c qtlockedfile_unix.cpp
 
 HEADERS  += mainwindow.h \
     hidapi.h \
@@ -58,7 +80,6 @@ HEADERS  += mainwindow.h \
     qcustomplot.h \
     elevationloader.h \
     version.h \
-    watchpreferences.h \
     iactivityexporter.h \
     stravaexporter.h \
     httpserver.h \
@@ -71,12 +92,26 @@ HEADERS  += mainwindow.h \
     settings.h \
     aboutdialog.h \
     downloaddialog.h \
-    runkeeperexporter.h
+    runkeeperexporter.h \
+    smashrunexporter.h \
+    iexporterconfig.h \
+    stravaexporterconfig.h \
+    tcxexporterconfig.h \
+    runkeeperexporterconfig.h \
+    smashrunexporterconfig.h \
+    watchexporters.h \
+    exportworkingdialog.h \
+    centeredexpmovavg.h \
+    workouttreemodel.h \
+    qtsingleapplication.h \
+    qtlocalpeer.h \
+    qtlockedfile.h
 
 FORMS    += mainwindow.ui \
     settingsdialog.ui \
     aboutdialog.ui \
-    downloaddialog.ui
+    downloaddialog.ui \
+    exportworkingdialog.ui
 
 RESOURCES += \
     resources.qrc
@@ -93,3 +128,9 @@ else:win32-g++:CONFIG(debug, debug|release): PRE_TARGETDEPS += $$OUT_PWD/../qhtt
 else:win32:!win32-g++:CONFIG(release, debug|release): PRE_TARGETDEPS += $$OUT_PWD/../qhttpserver/src/release/qhttpserver.lib
 else:win32:!win32-g++:CONFIG(debug, debug|release): PRE_TARGETDEPS += $$OUT_PWD/../qhttpserver/src/debug/qhttpserver.lib
 else:unix:PRE_TARGETDEPS += $$OUT_PWD/../qhttpserver/src/libqhttpserver.a
+
+OTHER_FILES += \
+    smashrun.html
+
+DISTFILES += \
+    runningman2.icns

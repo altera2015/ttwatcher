@@ -1,5 +1,9 @@
 #include "tcxexport.h"
 #include <QDebug>
+#include <centeredexpmovavg.h>
+#include <math.h>
+
+// http://www.utilities-online.info/xsdvalidation/?save=dbdfe5b3-b776-4e28-8964-3f17c1b54a1c-xsdvalidation
 
 TCXExport::TCXExport()
 {
@@ -7,7 +11,7 @@ TCXExport::TCXExport()
 
 void TCXExport::save(QIODevice *dev, ActivityPtr activity)
 {
-    QVector<int> cadence;
+    CenteredExpMovAvg cadence;
 
     QXmlStreamWriter stream(dev);
     stream.setAutoFormatting(true);
@@ -26,6 +30,24 @@ void TCXExport::save(QIODevice *dev, ActivityPtr activity)
     stream.writeAttribute("Sport", activity->sportString());
 
     stream.writeTextElement("Id", activity->date().toUTC().toString(Qt::ISODate));
+
+
+    // pre-process the cadence.
+    foreach( LapPtr lap, activity->laps() )
+    {
+        if ( lap->points().count() == 0 )
+        {
+            continue;
+        }
+        foreach (TrackPointPtr tp, lap->points())
+        {
+            int c = qMin(4, tp->cadence());
+            cadence.add( c );
+        }
+    }
+
+
+    int pos = -1;
     foreach( LapPtr lap, activity->laps() )
     {
         if ( lap->points().count() == 0 )
@@ -36,80 +58,110 @@ void TCXExport::save(QIODevice *dev, ActivityPtr activity)
 
         TrackPointPtr p = lap->points().first();
 
+        int maxBpm = 0;
+        quint64 totalBpm = 0;
+        int bpmCount = 0;
+        double maxSpeed = 0;
+        double totalSpeed = 0;
+        int speedCount = 0;
+
+        foreach (TrackPointPtr tp, lap->points())
+        {
+            if ( tp->heartRate() > 20 && tp->heartRate() < 240 )
+            {
+                if ( tp->heartRate() > maxBpm )
+                {
+                    maxBpm = tp->heartRate();
+                }
+                totalBpm += tp->heartRate();
+                bpmCount++;
+            }
+
+            if ( tp->speed() > 0 )
+            {
+                totalSpeed += tp->speed();
+                speedCount++;
+            }
+            if ( tp->speed() > maxSpeed )
+            {
+                maxSpeed = tp->speed();
+            }
+        }
+
+
         stream.writeStartElement("Lap");
         stream.writeAttribute("StartTime", p->time().toUTC().toString(Qt::ISODate));
 
         stream.writeTextElement("TotalTimeSeconds", QString::number(lap->totalSeconds()) );
         stream.writeTextElement("DistanceMeters", QString::number( lap->length() ) );
+        stream.writeTextElement("MaximumSpeed", QString::number( maxSpeed,'f',5 ));
         stream.writeTextElement("Calories", QString::number( lap->calories() ));
+        if ( bpmCount > 0 )
+        {
+            stream.writeStartElement("AverageHeartRateBpm");
+            stream.writeTextElement("Value", QString::number( totalBpm / bpmCount ));
+            stream.writeEndElement(); // avgbpm
+
+            stream.writeStartElement("MaximumHeartRateBpm");
+            stream.writeTextElement("Value", QString::number( maxBpm ));
+            stream.writeEndElement(); // MaximumHeartRateBpm
+        }
+
         stream.writeTextElement("Intensity", "Active");
         stream.writeTextElement("TriggerMethod", "Manual");
+
+
+
 
         stream.writeStartElement("Track");
 
         foreach (TrackPointPtr tp, lap->points())
         {
-            if ( tp->latitude() == 0 && tp->longitude() == 0 )
-            {
-                continue;
-            }
-
+            pos++;
             stream.writeStartElement("Trackpoint");
 
 
             stream.writeTextElement("Time", tp->time().toUTC().toString(Qt::ISODate));
-            stream.writeStartElement("Position");
-            stream.writeTextElement("LatitudeDegrees", QString::number(tp->latitude(),'f',9) );
-            stream.writeTextElement("LongitudeDegrees", QString::number(tp->longitude(),'f',9) );
-            stream.writeEndElement(); // Position.
+            if ( tp->latitude() != 0 || tp->longitude() != 0 )
+            {
+
+                stream.writeStartElement("Position");
+                stream.writeTextElement("LatitudeDegrees", QString::number(tp->latitude(),'f',9) );
+                stream.writeTextElement("LongitudeDegrees", QString::number(tp->longitude(),'f',9) );
+                stream.writeEndElement(); // Position.
+            }
 
             if ( tp->altitude() > 0.0 )
             {
-                stream.writeTextElement("AltitudeMeters", QString::number(tp->altitude(),'f',9) );
+                stream.writeTextElement("AltitudeMeters", QString::number(tp->altitude(),'f',1) );
             }
             stream.writeTextElement("DistanceMeters", QString::number(tp->cummulativeDistance(),'f',9));
 
-            if ( tp->heartRate() >= 0 )
+            if ( tp->heartRate() > 20 && tp->heartRate() < 240 )
             {
                 stream.writeStartElement("HeartRateBpm");
                 stream.writeTextElement("Value", QString::number(tp->heartRate()));
                 stream.writeEndElement();
             }
 
+
+
+
             if ( activity->sport() == Activity::RUNNING )
-            {
-
-                // the first trackpoint has counted steps before starting.
-                // that means the first data point will have potentially a lot of steps
-                // so skip that guy.
-
-                if ( tp->cadence() > 0 && tp != lap->points().first() )
-                {
-                    cadence.push_front( tp->cadence() );
-                }
-
-                if ( cadence.count() > 0 )
-                {
-                    double dc = 0;
-                    foreach ( int c, cadence )
-                    {
-                        dc+=c;
-                    }
-                    if ( cadence.count() > 10 )
-                    {
-                        stream.writeTextElement("Cadence", QString::number( (int)(60.0 * dc / cadence.count()) ));
-                    }
-                }
-
-                while ( cadence.count() > 30 )
-                {
-                    cadence.pop_back();
-                }
+            {                
+                stream.writeTextElement("Cadence", QString::number( round(cadence.cea(pos) * 30.0 )));
             }
             if ( activity->sport() == Activity::BIKING )
             {
-                stream.writeTextElement("Cadence", QString::number(tp->cadence()));
+                stream.writeTextElement("Cadence", QString::number( round(cadence.cea(pos) )));
             }
+
+            stream.writeStartElement("Extensions");
+            stream.writeStartElement("TPX");
+            stream.writeAttribute("xmlns", "http://www.garmin.com/xmlschemas/ActivityExtension/v2");
+            stream.writeTextElement("Speed", QString::number(tp->speed(),'f',5));
+            stream.writeEndElement();
+            stream.writeEndElement();
 
 
             stream.writeEndElement(); // TrackPoint;
@@ -117,21 +169,37 @@ void TCXExport::save(QIODevice *dev, ActivityPtr activity)
 
         stream.writeEndElement(); // track.
 
+        if ( speedCount > 0 )
+        {
+            stream.writeStartElement("Extensions");
+            stream.writeStartElement("LX");
+            stream.writeAttribute("xmlns", "http://www.garmin.com/xmlschemas/ActivityExtension/v2");
+            stream.writeTextElement("AvgSpeed", QString::number( totalSpeed / speedCount,'f',5 ));
+            stream.writeEndElement();
+            stream.writeEndElement();
+        }
+
+
         stream.writeEndElement(); // lap.
     }
 
     stream.writeStartElement("Creator");
-    stream.writeAttribute("xsi","type","Device_t");
-    stream.writeTextElement("Name", "TomTom GPS Sport Watch");
+    stream.writeAttribute("xsi:type","Device_t");
+    stream.writeTextElement("Name", "TomTom GPS Sport Watch (TTWatcher)");
     stream.writeTextElement("UnitId", "0");
     stream.writeTextElement("ProductID", "0");
-    stream.writeEndElement();
-
-
-
+    stream.writeStartElement("Version");
+    stream.writeTextElement("VersionMajor", "1");
+    stream.writeTextElement("VersionMinor", "0");
+    stream.writeTextElement("BuildMajor", "0");
+    stream.writeTextElement("BuildMinor", "0");
+    stream.writeEndElement();// version
+    stream.writeEndElement(); // creator
 
     stream.writeEndElement(); // activity
     stream.writeEndElement(); // activities
+
+
     stream.writeEndElement(); // TrainingCenterDatabase
 
     stream.writeEndDocument();

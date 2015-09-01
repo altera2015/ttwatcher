@@ -3,6 +3,7 @@
 
 #include <QObject>
 #include <QNetworkAccessManager>
+
 #include "activity.h"
 
 class ElevationLoader : public QObject
@@ -12,14 +13,18 @@ class ElevationLoader : public QObject
     QNetworkAccessManager m_Manager;
 
 public:
-    ElevationLoader( QObject * parent = 0);
-    void load( ActivityPtr activity );
 
+    ElevationLoader( QObject * parent = 0);
+
+    enum Status { IDLE, DOWNLOADING, SUCCESS, FAILED };
+    Status load( ActivityPtr activity, bool synchronous = false );
+    Status status() const;
 private slots:
     void finished( QNetworkReply * reply );
 signals:
     void loaded( bool success, ActivityPtr activity );
 private:
+    Status m_Status;
     bool process(ActivityPtr activity, QByteArray data );
 };
 

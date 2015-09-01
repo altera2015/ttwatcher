@@ -3,27 +3,21 @@
 
 #include "iactivityexporter.h"
 #include <QNetworkAccessManager>
-
+#include "stravaexporterconfig.h"
 
 class StravaExporter : public IActivityExporter
 {
     Q_OBJECT
 
 public:
-    explicit StravaExporter(QObject *parent = 0);
+    explicit StravaExporter(const QString & serial, QObject *parent = 0);
 
     virtual QString name() const;
-    virtual bool loadConfig( const WatchPreferences & preferences, QDomElement element );
-    virtual bool isEnabled( ) const;
-    virtual void setEnabled(bool enabled);
-    virtual bool isOnline() const;
-    virtual bool autoOpen() const;
-    virtual void setAutoOpen( bool autoOpen );
-    virtual QIcon icon() const;
-    virtual void reset();
+    virtual QIcon icon() const;    
     virtual bool hasSetup() const;
     virtual void setup( QWidget * parent );
-    virtual void saveConfig( const WatchPreferences & preferences, QDomDocument & document, QDomElement & element );
+    virtual IExporterConfig & config();
+    IExporterConfig *createConfig();
 
 signals:
 
@@ -32,12 +26,10 @@ public slots:
 private slots:
     void requestFinished( QNetworkReply * reply );
 
-private:
-    bool m_Enabled;
-    QByteArray m_AuthToken;
-    QNetworkAccessManager m_Manager;
-    bool m_AutoOpen;
+private:        
+    QNetworkAccessManager m_Manager;    
     QIcon m_Icon;
+    StravaExporterConfig m_Config;
 
     void getActivityStatus(int activityId , int retry);
     void activitySubmitted( QJsonDocument & d, int httpCode );

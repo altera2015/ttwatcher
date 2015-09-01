@@ -1,5 +1,5 @@
-#ifndef WATCHPREFERENCES_H
-#define WATCHPREFERENCES_H
+#ifndef WATCHEXPORTERS_H
+#define WATCHEXPORTERS_H
 
 #include <QObject>
 #include <QSharedPointer>
@@ -7,26 +7,27 @@
 
 class TTWatch;
 
-class WatchPreferences : public QObject
+class WatchExporters : public QObject
 {
     Q_OBJECT
 public:
-    explicit WatchPreferences(const QString & serial, QObject *parent = 0);
+    explicit WatchExporters(const QString & serial, QObject *parent = 0);
 
     QString name() const;
     void setName( const QString & name );
     QString serial() const;
 
-    bool parsePreferences(const QByteArray & data );
-    QByteArray updatePreferences(const QByteArray &data );
-
     IActivityExporterList exporters();
     IActivityExporterPtr exporter( const QString & service );
 
-    QString encodeToken(const QByteArray &token) const;
-    QByteArray decodeToken(const QString &token) const;
+    // do NOT free the returned objects. they are owned by this object.
+    const IExporterConfigMap configMap();
 
-    bool exportActivity(ActivityPtr activity);
+    // you must call freeImportMap on this puppy.
+    IExporterConfigMap configImportMap();
+    void freeImportMap(IExporterConfigMap & map);
+
+    bool exportActivity(ActivityPtr activity, const QString &exporterName = "", QStringList *sl = 0);
     bool exportFile(const QString &filename);
     bool isExporting();
 
@@ -34,8 +35,10 @@ signals:
     void exportFinished( bool success, QString message, QUrl url );
     void allExportsFinished();
     void exportError( QString error );
+    void settingsChanged( QString serial );
 public slots:
 private slots:
+    void onSettingsChanged();
     void onExportFinished(bool success, QString message, QUrl url);
 
 private:
@@ -44,9 +47,7 @@ private:
     QString m_Serial;
     int m_ExportFinishedCounter;
     IActivityExporterList m_Exporters;
-
-    QByteArray scrambleToken(const QByteArray &sourceToken) const;
 };
-typedef QSharedPointer<WatchPreferences>WatchPreferencesPtr;
+typedef QSharedPointer<WatchExporters>WatchExportersPtr;
 
-#endif // WATCHPREFERENCES_H
+#endif // WATCHEXPORTERS_H

@@ -5,8 +5,10 @@
 #include <QFile>
 #include <QDirIterator>
 #include <QStandardPaths>
+#include <QBuffer>
+#include <QRegExp>
 #include "hidapi.h"
-#include "watchpreferences.h"
+#include "watchexporters.h"
 
 void TTManager::checkvds(quint16 vid, const DeviceIdList &deviceIds)
 {
@@ -27,8 +29,6 @@ void TTManager::checkvds(quint16 vid, const DeviceIdList &deviceIds)
             // find matching devices
             if ( deviceIds.contains(devices->product_id))
             {
-                //QString ms = QString::fromWCharArray( devices->manufacturer_string );
-                //QString ds = QString::fromWCharArray( devices->product_string );
                 QString serial = QString::fromWCharArray( devices->serial_number );
                 QString path = devices->path;
 
@@ -39,8 +39,10 @@ void TTManager::checkvds(quint16 vid, const DeviceIdList &deviceIds)
                 }
                 else
                 {
-                    m_TTWatchList.append( new TTWatch( path, serial, this ) );
-                    emit ttArrived();
+                    TTWatch * newWatch = new TTWatch( path, serial, this );
+                    m_TTWatchList.append( newWatch );
+                    prepareWatch( newWatch );
+                    emit ttArrived(serial);
                 }
 
             }
@@ -58,26 +60,90 @@ void TTManager::checkvds(quint16 vid, const DeviceIdList &deviceIds)
         if ( w )
         {
             wl.append(w);
-            m_TTWatchList.removeOne(w);
+            emit ttRemoved(w->serial());
         }
     }
 
-    if ( currentPaths.length() > 0 )
-    {
-        emit ttRemoved();
-    }
-
     foreach ( TTWatch * w, wl )
-    {
+    {        
+        m_TTWatchList.removeOne(w);
         w->deleteLater();
     }
 
 }
 
+void TTManager::prepareWatch(TTWatch *watch)
+{
+    // Settings rules.
+    // Store settings on PC (this can include settings that do not appear on the actual watch.
+    // Load these settings
+    // Check that the settings from the watch have not changed
+    // If changed ask user if they want to apply changes locally.
+
+    if ( m_WatchExporters.contains( watch->serial() ))
+    {
+        WatchExportersPtr exp = exporters(watch->serial());
+        QByteArray data;
+        bool mustSave = false;
+
+        if ( watch->downloadPreferences(data))
+        {
+            IExporterConfigMap configImportMap = exp->configImportMap();
+            QString name;
+            if (!loadConfig(data, configImportMap, name))
+            {
+                return;
+            }
+            if ( exp->name() != name )
+            {
+                exp->setName(name);
+                mustSave = true;
+            }
+
+            // now compare with what we have.
+            IExporterConfigMap configMap = exp->configMap();
+            for(IExporterConfigMap::iterator i = configMap.begin(); i!=configMap.end();i++)
+            {
+                QString name = i.key();
+                IExporterConfig * config = i.value();
+                IExporterConfig * configImport = configImportMap[name];
+
+                if ( config->allowSaveOnWatch() && !config->equals( configImport ))
+                {
+                    config->apply( configImport );
+                    mustSave = true;
+                }
+            }
+
+
+            if ( mustSave )
+            {
+                saveConfig(exp);
+            }
+
+            exp->freeImportMap(configImportMap);
+        }
+    }
+    else
+    {
+        WatchExportersPtr exp = exporters(watch->serial()); // this will create the exporter if it didn't exist.
+        QByteArray data;
+        if ( watch->downloadPreferences(data))
+        {
+            QString name;
+            if ( loadConfig(data, exp->configMap(),name))
+            {
+                exp->setName(name);
+                saveConfig(exp);
+            }
+        }
+    }
+}
+
 TTManager::TTManager(QObject *parent) :
     QObject(parent)
 {
-    loadPreferences();
+    loadAllConfig();
 
     if ( hid_init() < 0 )
     {
@@ -117,30 +183,41 @@ TTWatch *TTManager::watch(const QString &serial)
     return 0;
 }
 
-PreferencesMap & TTManager::preferences()
+WatchExportersMap & TTManager::exporters()
 {
-    return m_Preferences;
+    return m_WatchExporters;
 }
 
-WatchPreferencesPtr TTManager::preferences(const QString &serial)
+WatchExportersPtr TTManager::exporters(const QString &serial)
 {
-    if ( m_Preferences.contains(serial))
+    if ( m_WatchExporters.contains(serial))
     {
-        return m_Preferences[serial];
+        return m_WatchExporters[serial];
     }
 
-    WatchPreferencesPtr wp = WatchPreferencesPtr::create(serial);
+    WatchExportersPtr wp = WatchExportersPtr::create(serial);
     connect(wp.data(), SIGNAL(allExportsFinished()), this, SIGNAL(allExportingFinished()));
     connect(wp.data(), SIGNAL(exportError(QString)), this, SIGNAL(exportError(QString)));
-    m_Preferences[ serial ] = wp;
+    connect(wp.data(), SIGNAL(settingsChanged(QString)), this, SLOT(configChanged(QString)));
+    m_WatchExporters[ serial ] = wp;
+
+    if ( serial == "DEFAULT")
+    {
+        wp->setName(tr("Default"));
+        IActivityExporterPtr ae = wp->exporter("TCX");
+        if ( ae )
+        {
+            ae->config().setValid(true);
+        }
+    }
     return wp;
 }
 
-WatchPreferencesPtr TTManager::preferencesForName(const QString &name)
+WatchExportersPtr TTManager::exportersForName(const QString &name)
 {
-    PreferencesMap::iterator i = m_Preferences.begin();
+    WatchExportersMap::iterator i = m_WatchExporters.begin();
 
-    for(;i!=m_Preferences.end();i++)
+    for(;i!=m_WatchExporters.end();i++)
     {
         if ( i.value()->name() == name )
         {
@@ -148,27 +225,23 @@ WatchPreferencesPtr TTManager::preferencesForName(const QString &name)
         }
     }
 
-    return WatchPreferencesPtr();
+    return WatchExportersPtr();
 }
 
-WatchPreferencesPtr TTManager::defaultPreferences()
+WatchExportersPtr TTManager::defaultExporters()
 {
-    return preferences("DEFAULT");
+    return exporters("DEFAULT");
 }
 
-void TTManager::savePreferences(WatchPreferencesPtr preferences)
+void TTManager::saveConfig(QIODevice *dest, WatchExportersPtr watchExporters)
 {
     QDomDocument d;
     QDomElement preferencesElement = d.createElement("preferences");
     d.appendChild(preferencesElement);
 
     QDomElement nameElement = d.createElement("watchName");
-    nameElement.appendChild(  d.createTextNode( preferences->name() ) );
+    nameElement.appendChild(  d.createTextNode( watchExporters->name() ) );
     preferencesElement.appendChild(nameElement);
-
-    QDomElement serialElement = d.createElement("serial");
-    serialElement.appendChild(  d.createTextNode( preferences->serial() ) );
-    preferencesElement.appendChild(serialElement);
 
     QDomElement exportersElement = d.createElement("exporters");
     preferencesElement.appendChild(exportersElement);
@@ -179,45 +252,41 @@ void TTManager::savePreferences(WatchPreferencesPtr preferences)
     QDomElement offlineElement = d.createElement("offline");
     exportersElement.appendChild(offlineElement);
 
-    foreach ( IActivityExporterPtr exp, preferences->exporters())
-    {
-        exp->saveConfig( *preferences.data(), d, exp->isOnline() ? onlineElement : offlineElement );
+    IExporterConfigMap configMap = watchExporters->configMap();
+    foreach ( IExporterConfig * config, configMap )
+    {         
+        config->updateConfig( d, config->isOnline() ? onlineElement : offlineElement );
     }
 
-    QString path = preferenceDir();
-    QDir mkpathd;
-    mkpathd.mkpath(path);
-
-    QString filename = path + QDir::separator() + "watchPrefs_" + preferences->serial() + ".xml";
-
-    QFile f( filename );
-    if ( !f.open(QIODevice::WriteOnly))
-    {
-        qCritical() << "TTManager::savePreferences / could not write preferences file " << filename;
-        return;
-    }
-    f.write( d.toByteArray() );
-    f.close();
+    dest->write( d.toByteArray( ));
 }
 
-void TTManager::savePreferences()
+void TTManager::saveAllConfig(bool saveToWatch, const QString serialOnly)
 {
-    PreferencesMap::iterator i = m_Preferences.begin();
+    WatchExportersMap::iterator i = m_WatchExporters.begin();
 
-    for(;i!=m_Preferences.end();i++)
+    for(;i!=m_WatchExporters.end();i++)
     {
 
-        WatchPreferencesPtr preferences = i.value();
+        WatchExportersPtr watchExporters = i.value();
 
-        if ( preferences->name().length() == 0 )
+        if ( serialOnly.length() > 0 && serialOnly != watchExporters->serial() )
+        {
+            continue;
+        }
+
+        if ( watchExporters->name().length() == 0 )
         {
             continue;
         }
 
         bool changed = false;
-        foreach ( IActivityExporterPtr exp, preferences->exporters())
+
+        IExporterConfigMap configMap = watchExporters->configMap();
+
+        foreach ( IExporterConfig * config, configMap)
         {
-            changed |= exp->changed();
+            changed |= config->changed();
         }
 
         if ( !changed )
@@ -225,55 +294,34 @@ void TTManager::savePreferences()
             continue;
         }
 
-        TTWatch * w = watch( preferences->serial() );
+        saveConfig(watchExporters);
 
-        if ( w )
+        if ( saveToWatch )
         {
-            savePreferences(preferences);
+            TTWatch * w = watch( watchExporters->serial() );
+            if ( w )
+            {
+                QByteArray prefData;
+                if ( !w->downloadPreferences(prefData))
+                {
+                    qCritical() << "TTManager::saveAllConfig / could not load preferences.";
+                    continue;
+                }
 
-            QByteArray prefData;
-            if ( !w->downloadPreferences(prefData))
-            {
-                qCritical() << "TTManager::savePreferences / could not load preferences.";
-                continue;
-            }
+                prefData = mergeConfig(prefData, configMap);
 
-            prefData = preferences->updatePreferences(prefData);
-
-            if ( !w->uploadPreferences(prefData) )
-            {
-                qCritical() << "TTManager::savePreferences / could not save preferences to watch.";
-            }
-        }
-        else
-        {
-            // watch not plugged in, could still be the default device...
-            if ( preferences->serial() == "DEFAULT" )
-            {
-                savePreferences(preferences);
-            }
-            else
-            {
-                // nope, really not here, revert to previous
-                qWarning() << "TTManager::savePreferences / watch gone, reverting changes.";
-                QString filename = preferenceDir() + QDir::separator() + "watchPrefs_" + preferences->serial() + ".xml";
-                loadPreferences(filename);
+                if ( !w->uploadPreferences(prefData) )
+                {
+                    qCritical() << "TTManager::saveAllConfig / could not save preferences to watch.";
+                }
             }
         }
     }
 }
 
-void TTManager::loadPreferences(const QString & filename)
+bool TTManager::loadConfig(QIODevice *source, const IExporterConfigMap & configMap, QString &name)
 {
-    QFile f( filename );
-    if ( !f.open(QIODevice::ReadOnly))
-    {
-        qDebug() << "TTManager::loadPreferences / could not load preferences.";
-        return;
-    }
-
-    QByteArray xml = f.readAll();
-    f.close();
+    QByteArray xml = source->readAll();
 
     QDomDocument d;
     d.setContent(xml);
@@ -281,40 +329,139 @@ void TTManager::loadPreferences(const QString & filename)
     QDomElement preferencesElement = d.firstChildElement("preferences");
     if ( preferencesElement.isNull() )
     {
-        qDebug() << "TTManager::loadPreferences / not a preferences XML file. " << filename;
-        return;
+        qDebug() << "TTManager::loadConfig / not a preferences XML file. " << source;
+        return false;
     }
 
     QDomElement nameElement = preferencesElement.firstChildElement("watchName");
-    QDomElement serialElement = preferencesElement.firstChildElement("serial");
-    if ( nameElement.isNull() || serialElement.isNull() )
+
+    if ( nameElement.isNull())
     {
-        qDebug() << "TTManager::loadPreferences / missing element name or serial. " << filename;
-        return;
+        qDebug() << "TTManager::loadConfig / missing element name or serial. " << source;
+        return false;
     }
 
-    QString name = nameElement.text();
-    QString serial = serialElement.text();
-
-    WatchPreferencesPtr p = preferences( serial );
-    p->setName(name);
+    name = nameElement.text();
 
     QDomElement exportersElement = preferencesElement.firstChildElement("exporters");
 
     QDomElement onlineElement = exportersElement.firstChildElement("online");
     QDomElement offlineElement = exportersElement.firstChildElement("offline");
 
-    foreach ( IActivityExporterPtr exp, p->exporters())
+    foreach ( IExporterConfig * config, configMap)
     {
-        exp->loadConfig( *p.data(), exp->isOnline() ? onlineElement : offlineElement );
+        config->loadConfig( config->isOnline() ? onlineElement : offlineElement );
     }
+
+    return true;
 }
 
-void TTManager::loadPreferences()
-{
-    // m_Preferences.clear();
 
-    QString path = preferenceDir();
+QByteArray TTManager::mergeConfig(const QByteArray &source, const IExporterConfigMap &configMap)
+{
+    QDomDocument dd;
+
+    if ( !dd.setContent(source) )
+    {
+        qWarning() << "TTManager::mergeConfig / could not read preferences.";
+        return source;
+    }
+
+    QDomElement preferences = dd.firstChildElement("preferences");
+    if ( preferences.isNull() )
+    {
+        qWarning() << "TTManager::mergeConfig / no preferences element.";
+        return source;
+    }
+
+
+    QDomElement exporters = preferences.firstChildElement("exporters");
+    if ( exporters.isNull() )
+    {
+        exporters = dd.documentElement();
+        exporters.setTagName("exporters");
+        preferences.appendChild(exporters);
+    }
+
+    QDomElement onlineExporters = exporters.firstChildElement("online");
+    if ( onlineExporters.isNull() )
+    {
+        onlineExporters = dd.documentElement();
+        onlineExporters.setTagName("online");
+        exporters.appendChild(onlineExporters);
+    }
+    QDomElement offlineExporters = exporters.firstChildElement("offline");
+    if ( offlineExporters.isNull() )
+    {
+        offlineExporters = dd.documentElement();
+        offlineExporters.setTagName("offline");
+        exporters.appendChild(offlineExporters);
+    }
+
+
+
+    foreach ( IExporterConfig * config, configMap)
+    {
+        if ( config->allowSaveOnWatch() )
+        {
+            config->updateConfig(dd, config->isOnline() ? onlineExporters : offlineExporters );
+        }
+    }
+
+    return dd.toByteArray(3);
+}
+
+
+void TTManager::saveConfig(const QString &filename, WatchExportersPtr watchExporters)
+{
+    QFile f( filename );
+    if ( !f.open(QIODevice::WriteOnly))
+    {
+        qCritical() << "TTManager::saveConfig / could not write preferences file " << filename;
+        return;
+    }
+    saveConfig(&f, watchExporters);
+}
+
+bool TTManager::loadConfig(const QString &filename, const IExporterConfigMap &configMap, QString &name)
+{
+    QFile f( filename );
+    if ( !f.open(QIODevice::ReadOnly))
+    {
+        qDebug() << "TTManager::loadConfig / could not load preferences.";
+        return "";
+    }
+    return loadConfig(&f, configMap, name);
+}
+
+void TTManager::saveConfig(QByteArray &dest, WatchExportersPtr watchExporters)
+{
+    QBuffer b(&dest);
+    b.open(QIODevice::WriteOnly);
+    saveConfig(&b, watchExporters);
+    b.close();
+}
+
+bool TTManager::loadConfig(const QByteArray &source, const IExporterConfigMap &configMap, QString &name)
+{
+    QBuffer b;
+    b.setData(source);
+    b.open(QIODevice::ReadOnly);
+    bool result = loadConfig(&b, configMap, name);
+    b.close();
+    return result;
+}
+
+void TTManager::saveConfig(WatchExportersPtr watchExporters)
+{
+    QString filename = configDir() + QDir::separator() + "watchPrefs_" + watchExporters->serial() + ".xml";
+    saveConfig(filename, watchExporters);
+}
+
+void TTManager::loadAllConfig()
+{
+    QRegExp reg("watchPrefs_(.*)\\.xml");
+    QString path = configDir();
     QStringList sl;
     sl.append("watchPrefs_*.xml");
     QDirIterator i(path, sl, QDir::Files);
@@ -322,23 +469,35 @@ void TTManager::loadPreferences()
     {
         QString filename = i.next();
 
+        QString serial = "unknown";
 
-        loadPreferences(filename);
+        if ( reg.indexIn(filename) >= 0 )
+        {
+            serial = reg.cap(1);
+        }
+
+
+        WatchExportersPtr exp = exporters(serial);
+        QString name;
+        if ( loadConfig(filename, exp->configMap(), name) )
+        {
+            exp->setName(name);
+        }
     }
 
-    if ( !defaultPreferences() )
-    {
-        setupDefaultPreferences();
-    }
+    defaultExporters();
 }
 
-QString TTManager::preferenceDir() const
+QString TTManager::configDir() const
 {
 #if QT_VERSION < QT_VERSION_CHECK(5, 4, 0) 
-    return QStandardPaths::writableLocation( QStandardPaths::ConfigLocation );
+    QString path = QStandardPaths::writableLocation( QStandardPaths::ConfigLocation );
 #else
-    return QStandardPaths::writableLocation( QStandardPaths::AppLocalDataLocation );
-#endif
+    QString path = QStandardPaths::writableLocation( QStandardPaths::AppLocalDataLocation );
+#endif    
+    QDir mkpathd;
+    mkpathd.mkpath(path);
+    return path;
 }
 
 
@@ -381,14 +540,8 @@ void TTManager::checkForTTs()
     checkvds(0x1390, deviceIdList);
 }
 
-void TTManager::setupDefaultPreferences()
+void TTManager::configChanged(QString serial)
 {
-    WatchPreferencesPtr p = preferences("DEFAULT");
-    p->setName("Default");
-
-    IActivityExporterPtr ae = p->exporter("TCX");
-    if ( ae )
-    {
-        ae->setEnabled(true);
-    }
+    saveAllConfig(true, serial);
 }
+

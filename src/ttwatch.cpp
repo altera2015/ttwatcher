@@ -8,6 +8,7 @@
 #include <QDesktopServices>
 #include <QBuffer>
 #include <QByteArray>
+#include <QEventLoop>
 
 #include "ttbinreader.h"
 #include "tcxexport.h"
@@ -29,7 +30,7 @@
 #define TT_GET_VERSION          0x21 // responds with 01 08 07 21 31 2E 38 2E 32 35 radix: ascii: ...!1.8.25
 
 #define TT_GET_BATTERY_LEVEL    0x23
-#define TT_UNKNOWN_1D           0x1d
+#define TT_RESET_GPS_PROCESSOR  0x1d
 
 
 /* File 00010100 contains GPS Quickfix data.
@@ -79,7 +80,7 @@ bool TTWatch::sendCommand(const QByteArray &command, QByteArray &response)
 
     response.resize(64);
 
-    if ( hid_read( m_Device, (unsigned char*)response.data(), 64) < 64 )
+    if ( hid_read_timeout( m_Device, (unsigned char*)response.data(), 64,1000) < 64 )
     {
         qDebug() << "TTWatch::sendCommand / read failed.";
         return false;
@@ -151,7 +152,8 @@ bool TTWatch::_readFile(QByteArray &dest, const TTFile &file, bool processEvents
     {
         if ( pos > 0 && processEvents )
         {
-            QCoreApplication::processEvents();
+            //QCoreApplication::processEvents();
+            // macos doesn't handle this very well.
         }
 
         quint8 len = qMin( (quint32)maxReadSize, quint32(file.length - pos) );
@@ -472,6 +474,8 @@ bool TTWatch::downloadPreferences(QByteArray &data)
         return true;
     }
 
+
+
     return false;
 }
 
@@ -490,7 +494,7 @@ bool TTWatch::postGPSFix()
     }
 
     QByteArray postGPS, response;
-    postGPS.append((char)TT_UNKNOWN_1D);
+    postGPS.append((char)TT_RESET_GPS_PROCESSOR);
     return sendCommand(postGPS, response);
 }
 
@@ -543,8 +547,7 @@ QStringList TTWatch::download(const QString &basePath, bool deleteWhenDone)
             continue;
         }
 
-        QDateTime t = QDateTime::fromTime_t( (data[11] << 24) | (data[10] << 16) | (data[9] << 8 ) | data[8] );
-
+        QDateTime t = TTBinReader::readTime(data, 8, true);
         QString exportPath = basePath + QDir::separator() + t.date().toString("yyyy-MM-dd");
         QDir d;
         if (!d.mkpath(exportPath))

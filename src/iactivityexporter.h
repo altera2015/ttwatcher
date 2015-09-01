@@ -10,41 +10,47 @@
 #include <QUrl>
 #include <QIcon>
 
-class WatchPreferences;
+#include "iexporterconfig.h"
+
+class WatchExporters;
 
 class IActivityExporter : public QObject
 {
     Q_OBJECT
 protected:
-    void parseExportTag( QDomElement element, const QString & idAttribute, bool & enabled, bool & autoOpen );
-    void writeExportTag( QDomDocument & document, QDomElement &element, const QString & idAttribute, bool enabled, bool autoOpen);
 public:
     explicit IActivityExporter(QObject *parent = 0);
 
+    // return name of exporter
     virtual QString name() const = 0;
-    virtual bool loadConfig( const WatchPreferences & preferences, QDomElement element ) = 0;
-    virtual bool isEnabled() const = 0;
-    virtual void setEnabled(bool enabled) = 0;
-    virtual bool isOnline() const = 0;
-    virtual bool autoOpen() const = 0;
-    virtual void setAutoOpen( bool autoOpen ) = 0;
-    virtual QIcon icon() const = 0;
-    virtual void reset() = 0;
-    virtual bool hasSetup() const = 0;
-    virtual void setup( QWidget * parent ) = 0;
-    virtual void saveConfig( const WatchPreferences & preferences, QDomDocument & document, QDomElement & element ) = 0;
 
-    bool changed() const;
-    void setChanged( bool changed );
+    // return icon for exporter
+    virtual QIcon icon() const = 0;
+
+    // return true if setup actually has a dialog.
+    virtual bool hasSetup() const = 0;
+
+    // popup a dialog with setup for exporter.
+    virtual void setup( QWidget * parent ) = 0;
+
+    // return the current config object.
+    virtual IExporterConfig & config() = 0;
+
+    // create a config object for current activity type.
+    virtual IExporterConfig * createConfig() = 0;
 
 signals:
+    // fires when this activity is done exporting it's data.
     void exportFinished( bool success, QString message, QUrl url );
+    // fires when this activity is done setting up it's authentication data (if any)
     void setupFinished( IActivityExporter * exporter, bool success );
+    // fires when the settings have changed and need re-saving
+    void settingsChanged(IActivityExporter * exporter);
 
 public slots:
+    // call this when you need to export the activity.
     virtual void exportActivity( ActivityPtr activity ) = 0;
-private:
-    bool m_Changed;
+
 };
 typedef QSharedPointer<IActivityExporter> IActivityExporterPtr;
 typedef QList<IActivityExporterPtr> IActivityExporterList;

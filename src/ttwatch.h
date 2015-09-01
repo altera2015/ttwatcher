@@ -78,7 +78,7 @@ class TTWatch : public QObject
             return false;
         }
 
-        bool close() {
+        void close() {
             m_Watch->close();
         }
     };

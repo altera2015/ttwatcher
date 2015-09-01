@@ -1,7 +1,9 @@
 #include "activity.h"
 
 
-Activity::Activity()
+Activity::Activity() :
+    m_Duration(0),
+    m_Distance(0)
 {
 }
 
@@ -42,16 +44,25 @@ void Activity::setSport(Activity::Sport sport)
 
 QString Activity::sportString() const
 {
-    switch (m_Sport)
+    return sportToString(m_Sport);
+}
+
+QString Activity::sportToString(Activity::Sport sport)
+{
+    switch (sport)
     {
     case RUNNING:
         return "Running";
     case TREADMILL:
-        return "Running";
+        return "Treadmill";
     case BIKING:
         return "Biking";
     case SWIMMING:
         return "Swimming";
+    case FREESTYLE:
+        return "Freestyle";
+    case STOPWATCH:
+        return "Stopwatch";
     default:
         return "Other";
     }
@@ -107,4 +118,24 @@ TrackPointPtr Activity::find(int secondsSinceStart)
         }
     }
     return TrackPointPtr();
+}
+
+void Activity::setDistance(float distance)
+{
+    m_Distance = distance;
+}
+
+float Activity::distance() const
+{
+    return m_Distance;
+}
+
+void Activity::setDuration(quint32 duration)
+{
+    m_Duration = duration;
+}
+
+quint32 Activity::duration() const
+{
+    return m_Duration;
 }

@@ -1,0 +1,13 @@
+#ifndef STRAVA_AUTH_H
+#define STRAVA_AUTH_H
+
+/*
+ * Rename this file to smashrun_auth.h and fill in the
+ * client ids you'd like to use.
+ *
+ */
+
+#define SMASHRUN_CLIENT_ID ""
+#define SMASHRUN_CLIENT_SECRET ""
+
+#endif // STRAVA_AUTH_H

@@ -11,7 +11,10 @@
 #include <QDir>
 #include <QStringList>
 #include <QMessageBox>
+
 #include "singleshot.h"
+#include "ttbinreader.h"
+#include "elevationloader.h"
 
 void DownloadDialog::showEvent(QShowEvent *e)
 {
@@ -51,8 +54,9 @@ DownloadDialog::~DownloadDialog()
     delete ui;
 }
 
-int DownloadDialog::processWatches()
+int DownloadDialog::processWatches(bool manualDownload)
 {
+
     // if the window is already visible we don't need to process.
     if ( this->isVisible() )
     {
@@ -60,6 +64,7 @@ int DownloadDialog::processWatches()
         return QDialog::Rejected;
     }
 
+    m_ManualDownload = manualDownload;
     return exec();
 }
 
@@ -80,70 +85,71 @@ void DownloadDialog::process()
 
     foreach ( TTWatch * watch, m_TTManager->watches())
     {
-        QByteArray prefData;
+
+        if ( !m_ManualDownload && !m_Settings->autoDownload() )
+        {
+            continue;
+        }
+
+        WatchExportersPtr exporters = m_TTManager->exporters( watch->serial());
 
         /**********************************************/
-        /* 1. LOADING PREFERENCES */
-        /**********************************************/
-
-        emit workInfo(tr("Loading Preferences"), false);
-
-        if ( !watch->downloadPreferences(prefData) )
-        {
-            qCritical() << "MainWindow::onWatchesChanged / unable to load preferences file.";
-            workInfo(tr("Failed to load preferences"), true);
-            continue;
-        }
-
-
-        /*QFile tempf("tempf.xml");
-        tempf.open(QIODevice::WriteOnly);
-        tempf.write(prefData);
-        tempf.close();*/
-
-        WatchPreferencesPtr preferences = m_TTManager->preferences( watch->serial() );
-        if ( !preferences )
-        {
-            qCritical() << "MainWindow::onWatchesChanged / did not get a preferences ptr.";
-            continue;
-        }
-
-        if ( !preferences->parsePreferences( prefData ) )
-        {
-            qCritical() << "MainWindow::onWatchesChanged / failed to parse preferences.";
-            workInfo(tr("Failed to parse preferences"), true);
-            continue;
-        }
-
-        if ( !m_Settings->autoDownload() )
-        {
-            continue;
-        }
-
-
-        /**********************************************/
-        /* 2. LOAD TTBINS */
+        /* 1. LOAD TTBINS */
         /**********************************************/
 
         workInfo(tr("Downloading .ttbins"), false);
 
-        QStringList files = watch->download(Settings::ttdir() + QDir::separator() + preferences->name(), true);
+        QStringList files = watch->download(Settings::ttdir() + QDir::separator() + exporters->name(), true);
 
         if ( files.count() > 0 )
         {
+            emit filesAvailable();
+
             workInfo(tr("Exporting .ttbins"), false);
 
             /**********************************************/
-            /* 3. EXPORT TTBINS */
+            /* 2. EXPORT TTBINS */
             /**********************************************/
 
             foreach ( const QString & filename, files )
             {
+                /**********************************************/
+                /* 3. Read TTBIN */
+                /**********************************************/
+
+                workInfo(tr("Reading .ttbin %1").arg(filename), false);
+
+                TTBinReader br;
+                ActivityPtr a = br.read(filename, true);
+                if ( !a )
+                {
+                    workInfo(tr("failed to parse %1.").arg(filename), false);
+                    qDebug() << "DownloadDialog::process / could not parse file " << filename;
+                    continue;
+                }
+
+                /**********************************************/
+                /* 4. Load Elevation Data */
+                /**********************************************/
+
+                workInfo(tr("Downloading Elevation Data for %1.").arg(filename), false);
+                ElevationLoader el;
+                if ( el.load(a, true) != ElevationLoader::SUCCESS )
+                {
+                    workInfo(tr("failed to download elevation data for %1.").arg(filename), false);
+                    continue;
+                }
+
+                /**********************************************/
+                /* 5. Export TTBIN */
+                /**********************************************/
+
                 workInfo(tr("Exporting .ttbin . %1").arg(filename), false);
 
-                if ( !preferences->exportFile(filename) )
+                if ( !exporters->exportActivity(a) )
                 {
                     workInfo(tr("Exporting .ttbin failed. %1").arg(filename), false);
+                    continue;
                 }
             }
 
@@ -164,12 +170,7 @@ void DownloadDialog::process()
     }
 
     /**********************************************/
-    /* 4. Save preferences data. */
-    /**********************************************/
-    m_TTManager->savePreferences();
-
-    /**********************************************/
-    /* 5. APPLY GPS QUICK FIX DATA */
+    /* 6. APPLY GPS QUICK FIX DATA */
     /**********************************************/
 
     if ( shouldDownloadQuickFix )
@@ -186,13 +187,12 @@ void DownloadDialog::process()
 }
 
 void DownloadDialog::workInfo(const QString &message, bool done)
-{
-    qDebug() << "DownloadDialog::workInfo" << message<< done;
+{    
     ui->logWidget->addItem(message);
     qApp->processEvents();
     if ( done )
     {
-        accept();
+        QMetaObject::invokeMethod(this, "accept",Qt::QueuedConnection);
     }
 }
 
@@ -210,9 +210,15 @@ void DownloadDialog::onFinished(QNetworkReply *reply)
     foreach ( TTWatch * watch, m_TTManager->watches())
     {
         workInfo(tr("Writing GPS Quick Fix data to %1...").arg(watch->serial()), false);
-        watch->writeFile( data, FILE_GPSQUICKFIX_DATA, true );
-        qDebug() << "PostGPS FIX" << watch->postGPSFix();
-        m_Settings->setQuickFixDate( watch->serial(), QDateTime::currentDateTime());
+        if ( watch->writeFile( data, FILE_GPSQUICKFIX_DATA, true ) )
+        {
+            qDebug() << "PostGPS FIX" << watch->postGPSFix();
+            m_Settings->setQuickFixDate( watch->serial(), QDateTime::currentDateTime());
+        }
+        else
+        {
+            qDebug() << "GPS Fix failed.";
+        }
     }
 
     onExportingFinished();
@@ -221,8 +227,8 @@ void DownloadDialog::onFinished(QNetworkReply *reply)
 void DownloadDialog::onExportingFinished()
 {
     bool stillExporting = false;
-    PreferencesMap::iterator i = m_TTManager->preferences().begin();
-    for(;i!=m_TTManager->preferences().end();i++)
+    WatchExportersMap::iterator i = m_TTManager->exporters().begin();
+    for(;i!=m_TTManager->exporters().end();i++)
     {
         if ( i.value()->isExporting() )
         {

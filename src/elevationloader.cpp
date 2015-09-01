@@ -5,16 +5,18 @@
 #include <QJsonArray>
 #include <QJsonValue>
 #include <QFile>
-
+#include <QEventLoop>
 #include <QNetworkProxy>
-ElevationLoader::ElevationLoader(QObject * parent) : QObject(parent)
-{
-    connect(&m_Manager, SIGNAL(finished(QNetworkReply*)), this, SLOT(finished(QNetworkReply*)));
+
+
+ElevationLoader::ElevationLoader(QObject * parent) :
+    QObject(parent),
+    m_Status(IDLE)
+{    
 }
 
-
-void ElevationLoader::load(ActivityPtr activity)
-{
+ElevationLoader::Status ElevationLoader::load(ActivityPtr activity, bool synchronous)
+{    
     // the tt watches do not log elevation, even though some
     // models have barometric height measurement, hey TT please
     // log that data in the .ttbin files!!
@@ -30,8 +32,9 @@ void ElevationLoader::load(ActivityPtr activity)
         {
             if ( process(activity, data) )
             {
+                m_Status = SUCCESS;
                 emit loaded(true, activity);
-                return;
+                return SUCCESS;
             }
         }
     }
@@ -61,9 +64,24 @@ void ElevationLoader::load(ActivityPtr activity)
     r.setHeader( QNetworkRequest::ContentTypeHeader, "text/plain");
     r.setHeader( QNetworkRequest::UserAgentHeader, "Mozilla/5.0");
     QNetworkReply * reply = m_Manager.post( r, requestData.toJson() );
-    reply->setProperty("ActivityPtr", QVariant::fromValue( activity ));
-    Q_UNUSED(reply);
+    reply->setProperty("ActivityPtr", QVariant::fromValue( activity ));    
+    m_Status = DOWNLOADING;
 
+    if ( synchronous )
+    {
+        QEventLoop loop;
+        connect(reply, SIGNAL(finished()), &loop, SLOT(quit()));
+        loop.exec();
+        finished(reply); // sets m_Status to final value.
+        return m_Status;
+    }
+    else
+    {
+        connect(reply, &QNetworkReply::finished, this, [this, reply](){
+            finished(reply);
+        });
+        return DOWNLOADING;
+    }
 }
 
 void ElevationLoader::finished(QNetworkReply *reply)
@@ -73,6 +91,7 @@ void ElevationLoader::finished(QNetworkReply *reply)
     if ( reply->error() != QNetworkReply::NoError )
     {
         qDebug() << "ElevationLoader::finished / could not load elevation " << reply->errorString();
+        m_Status = FAILED;
         emit loaded(false, activity);
         reply->deleteLater();
         return;
@@ -84,7 +103,7 @@ void ElevationLoader::finished(QNetworkReply *reply)
 
     bool success = process(activity, data);
 
-    // if ( success )
+    if ( success )
     {
         QFile f( activity->filename() + ".elevation");
         if ( f.open(QIODevice::ReadWrite) )
@@ -92,6 +111,12 @@ void ElevationLoader::finished(QNetworkReply *reply)
             f.write(data);
             f.close();
         }
+
+        m_Status = SUCCESS;
+    }
+    else
+    {
+        m_Status = FAILED;
     }
 
     emit loaded(success, activity);

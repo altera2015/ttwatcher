@@ -7,14 +7,42 @@
 #include <QJsonObject>
 #include <QDebug>
 
+Settings * Settings::gSettings = 0;
+
 Settings::Settings(QObject *parent) :
     QObject(parent),
     m_TileUrl("http://otile1.mqcdn.com/tiles/1.0.0/map/%1/%2/%3.png"),
     m_LastLatitude(26.929148599999998),
     m_LastLongitude(-80.174721549999987),
     m_LastZoom(13),
-    m_AutoDownload(false)
+    m_AutoDownload(false),
+    m_UseMetric(true)
 {
+    qDebug()<<Settings::settingsFilename() ;
+}
+
+Settings *Settings::get()
+{
+    if ( gSettings != 0 )
+    {
+        return gSettings;
+    }
+    else
+    {
+        gSettings = new Settings();
+        gSettings->load();
+        return gSettings;
+    }
+
+}
+
+void Settings::free()
+{
+    if ( gSettings != 0 )
+    {
+        delete gSettings;
+        gSettings = 0;
+    }
 }
 
 QString Settings::tileUrl() const
@@ -105,6 +133,20 @@ QDateTime Settings::lastQuickFix(const QString &serial)
     }
 }
 
+bool Settings::useMetric() const
+{
+    return m_UseMetric;
+}
+
+void Settings::setUseMetric(bool useMetric)
+{
+    if ( m_UseMetric != useMetric )
+    {
+        m_UseMetric = useMetric;
+        emit useMetricChanged(useMetric);
+    }
+}
+
 void Settings::save()
 {
     QJsonObject o;
@@ -113,6 +155,7 @@ void Settings::save()
     o["lastLatitude"] = lastLatitude();
     o["lastZoom"] = lastZoom();
     o["autoDownload"] = autoDownload();
+    o["useMetric"] = useMetric();
 
     QJsonDocument d;
     d.setObject(o);
@@ -169,6 +212,10 @@ void Settings::load()
     if ( settings.contains("autoDownload"))
     {
         setAutoDownload( settings["autoDownload"].toBool());
+    }
+    if ( settings.contains("useMetric"))
+    {
+        setUseMetric( settings["useMetric"].toBool());
     }
 }
 

@@ -5,12 +5,15 @@
 #include <QFileSystemModel>
 #include <QTimer>
 #include <QAbstractNativeEventFilter>
+#include <QSortFilterProxyModel>
+#include <QSystemTrayIcon>
 
 #include "ttmanager.h"
 #include "activity.h"
 #include "qcustomplot.h"
 #include "elevationloader.h"
 #include "settings.h"
+#include "workouttreemodel.h"
 
 namespace Ui {
 class MainWindow;
@@ -32,19 +35,32 @@ class MainWindow : public QMainWindow, public QAbstractNativeEventFilter
     QCPAxis * m_Axis4;
     ElevationLoader m_ElevationLoader;
     QComboBox * m_TileCombo;
-    Settings m_Settings;
+    Settings * m_Settings;
     QTimer m_WatchTimer;
     QTimer m_DeviceArriveDebounce;
+    WorkoutTreeModel m_WorkoutTreeModel;
+    QSortFilterProxyModel m_WorkoutSortingFilter;
+    bool m_MayClose;
+    QSystemTrayIcon * m_TrayIcon;
 
     void dragEnterEvent(QDragEnterEvent *e);
     void dropEvent(QDropEvent *e);
-    void download();
+    void download(bool manualDownload);
+    void closeEvent (QCloseEvent *event);
+
 public:
     explicit MainWindow(QWidget *parent = 0);
     ~MainWindow();
 
     virtual bool nativeEventFilter(const QByteArray &eventType, void *message, long *l);
+public slots:
+    void onMessage(QString messageReceived);
+    void onCommitDataRequest(QSessionManager & manager);
+    void onTrayIconActivated(QSystemTrayIcon::ActivationReason reason);
 private slots:
+    void showMe();
+    void exportActivity( const QString & exporterName );
+
     void onTileChanged();
 
 
@@ -81,6 +97,10 @@ private slots:
     void on_actionSettings_triggered();
 
     void on_actionDownload_from_watch_triggered();
+
+    void on_actionRescan_workout_directory_triggered();
+
+    void on_actionChange_Activity_Type_triggered();
 
 private:
     Ui::MainWindow *ui;

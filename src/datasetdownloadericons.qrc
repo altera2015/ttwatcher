@@ -1,0 +1,14 @@
+<RCC>
+    <qresource prefix="/">
+        <file>icons/gears6.png</file>
+        <file>icons/ok.png</file>
+        <file>icons/test20.png</file>
+        <file>icons/time28.png</file>
+        <file>icons/boxes37.png</file>
+        <file>icons/internet43.png</file>
+        <file>srtm.txt</file>
+        <file>ned1.txt</file>
+        <file>ned2.txt</file>
+        <file>ned13.txt</file>
+    </qresource>
+</RCC>

@@ -7,7 +7,8 @@
 #include <QFile>
 #include <QEventLoop>
 #include <QNetworkProxy>
-
+#include "elevation.h"
+#include "elevationtiledownloaderdialog.h"
 
 ElevationLoader::ElevationLoader(QObject * parent) :
     QObject(parent),
@@ -15,7 +16,7 @@ ElevationLoader::ElevationLoader(QObject * parent) :
 {    
 }
 
-ElevationLoader::Status ElevationLoader::load(ActivityPtr activity, bool synchronous)
+ElevationLoader::Status ElevationLoader::load(ActivityPtr activity, Source source, bool synchronous, bool fullReload)
 {    
     // the tt watches do not log elevation, even though some
     // models have barometric height measurement, hey TT please
@@ -23,22 +24,41 @@ ElevationLoader::Status ElevationLoader::load(ActivityPtr activity, bool synchro
 
     // for now we have to load the elevation data from their website.
 
-    QFile f(activity->filename() + ".elevation" );
-    if ( f.open(QIODevice::ReadOnly))
+    if ( !fullReload )
     {
-        QByteArray data = f.readAll();
-        f.close();
-        if ( data.length() > 4 )
+        QFile f(activity->filename() + ".elevation" );
+        if ( f.open(QIODevice::ReadOnly))
         {
-            if ( process(activity, data) )
+            QByteArray data = f.readAll();
+            f.close();
+            if ( data.length() > 1 )
             {
-                m_Status = SUCCESS;
-                emit loaded(true, activity);
-                return SUCCESS;
+                if ( process(activity, data) )
+                {
+                    m_Status = SUCCESS;
+                    emit loaded(true, activity);
+                    return SUCCESS;
+                }
             }
         }
     }
 
+
+    switch ( source )
+    {
+    case USE_TT:
+        // The TT elevation data is really really bad (at least for US). Let's use the SRTM or NED1 tiles instead.
+        return loadTT(activity, synchronous);
+    case USE_SRTMANDNED:
+        return loadSRTM(activity);
+    default:
+        return FAILED;
+    }
+}
+
+
+ElevationLoader::Status ElevationLoader::loadTT(ActivityPtr activity, bool synchronous)
+{
 
     QJsonDocument requestData;
 
@@ -63,8 +83,10 @@ ElevationLoader::Status ElevationLoader::load(ActivityPtr activity, bool synchro
     QNetworkRequest r( QUrl("https://mysports.tomtom.com/tyne/dem/fixmodel"));
     r.setHeader( QNetworkRequest::ContentTypeHeader, "text/plain");
     r.setHeader( QNetworkRequest::UserAgentHeader, "Mozilla/5.0");
-    QNetworkReply * reply = m_Manager.post( r, requestData.toJson() );
-    reply->setProperty("ActivityPtr", QVariant::fromValue( activity ));    
+    QByteArray jr = requestData.toJson();
+    qDebug() << jr;
+    QNetworkReply * reply = m_Manager.post( r, jr );
+    reply->setProperty("ActivityPtr", QVariant::fromValue( activity ));
     m_Status = DOWNLOADING;
 
     if ( synchronous )
@@ -83,6 +105,8 @@ ElevationLoader::Status ElevationLoader::load(ActivityPtr activity, bool synchro
         return DOWNLOADING;
     }
 }
+
+
 
 void ElevationLoader::finished(QNetworkReply *reply)
 {
@@ -120,6 +144,79 @@ void ElevationLoader::finished(QNetworkReply *reply)
     }
 
     emit loaded(success, activity);
+}
+
+ElevationLoader::Status ElevationLoader::loadSRTM(ActivityPtr activity)
+{
+    Elevation e;
+    e.prepare();
+
+    QJsonArray elevations;
+    float lastElevation = 0.0;
+
+    foreach ( LapPtr lap, activity->laps() )
+    {
+        foreach ( TrackPointPtr tp, lap->points() )
+        {
+            if ( tp->latitude() != 0 && tp->longitude() != 0 )
+            {
+                bool repeat = true;
+                while (repeat)
+                {
+                    repeat = false;
+                    QPointF p( tp->longitude(), tp->latitude() );
+                    float elevation;
+                    switch ( e.elevation(p, elevation) )
+                    {
+                        case Elevation::NO_TILE:
+                        {
+                            ElevationSource source = e.dataSources(p);
+                            if ( !source.valid )
+                            {
+                                elevations.append(lastElevation);
+                                tp->setAltitude(lastElevation);
+                                break;
+                            }
+
+                            ElevationTileDownloaderDialog d(e.basePath());
+                            d.addSource(source);
+                            d.show();
+                            d.go();
+                            if ( d.exec() == QDialog::Rejected )
+                            {
+                                emit loaded(false, activity);
+                                return ElevationLoader::FAILED;
+                            }
+                            e.prepare();
+                            repeat = true;
+                            break;
+                        }
+                        case Elevation::NO_DATA:
+                            elevations.append(lastElevation);
+                            tp->setAltitude(lastElevation);
+                            break;
+                        case Elevation::SUCCESS:
+                            lastElevation = elevation;
+                            elevations.append(elevation);
+                            tp->setAltitude(elevation);
+                            break;
+                    }
+                }
+            }
+        }
+    }
+
+    QJsonDocument d;
+    d.setArray(elevations);
+
+    QFile f( activity->filename() + ".elevation");
+    if ( f.open(QIODevice::ReadWrite) )
+    {
+        f.write( d.toJson());
+        f.close();
+    }
+    emit loaded(true, activity);
+    return ElevationLoader::SUCCESS;
 }
 
 bool ElevationLoader::process(ActivityPtr activity, QByteArray data)

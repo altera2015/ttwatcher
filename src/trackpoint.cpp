@@ -1,5 +1,6 @@
 #include "trackpoint.h"
 
+#include "geodistance.h"
 
 int TrackPoint::calories() const
 {
@@ -33,7 +34,7 @@ double TrackPoint::speed() const
 
 bool TrackPoint::hasGPS()
 {
-    return m_Latitude!=0 && m_Longitude!=0;
+    return latitude()!=0 && longitude()!=0;
 }
 
 QString TrackPoint::toString() const
@@ -49,9 +50,13 @@ QString TrackPoint::toString() const
             .arg(cummulativeDistance());
 }
 
+const QPointF &TrackPoint::coordinate() const
+{
+    return m_Coordinate;
+}
+
+
 TrackPoint::TrackPoint() :
-    m_Latitude(0.0),
-    m_Longitude(0.0),
     m_Altitude(0.0),
     m_HeartRate(-1),
     m_Cadence(-1),
@@ -73,22 +78,22 @@ void TrackPoint::setTime(const QDateTime &Time)
 
 double TrackPoint::latitude() const
 {
-    return m_Latitude;
+    return m_Coordinate.y();
 }
 
-void TrackPoint::setLatitude(double Latitude)
+void TrackPoint::setLatitude(double latitude)
 {
-    m_Latitude = Latitude;
+    m_Coordinate.setY(latitude);
 }
 
 double TrackPoint::longitude() const
 {
-    return m_Longitude;
+    return m_Coordinate.x();
 }
 
-void TrackPoint::setLongitude(double Longitude)
+void TrackPoint::setLongitude(double longitude)
 {
-    m_Longitude = Longitude;
+    m_Coordinate.setX(longitude);
 }
 
 double TrackPoint::altitude() const

@@ -5,12 +5,12 @@
 #include <QList>
 #include <QSharedPointer>
 #include <QDateTime>
+#include <QPointF>
 
 class TrackPoint
 {
     QDateTime m_Time;
-    double m_Latitude;
-    double m_Longitude;
+    QPointF m_Coordinate;
     double m_Altitude;
     int m_HeartRate;
     int m_Cadence;
@@ -45,7 +45,7 @@ public:
     bool hasGPS();
 
     QString toString() const;
-
+    const QPointF & coordinate() const;
 };
 typedef QSharedPointer<TrackPoint>TrackPointPtr;
 typedef QList<TrackPointPtr>TrackPointList;

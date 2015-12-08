@@ -169,7 +169,7 @@ void TTWorkoutItem::set(QDateTime startTime, QTime duration, int distance, Activ
 bool TTWorkoutItem::saveCache()
 {
     QFile f( m_Filename + ".cache");
-    if ( !f.open(QIODevice::WriteOnly))
+    if ( !f.open(QIODevice::WriteOnly|QIODevice::Truncate))
     {
         return false;
     }

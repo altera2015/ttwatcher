@@ -415,7 +415,7 @@ QByteArray TTManager::mergeConfig(const QByteArray &source, const IExporterConfi
 void TTManager::saveConfig(const QString &filename, WatchExportersPtr watchExporters)
 {
     QFile f( filename );
-    if ( !f.open(QIODevice::WriteOnly))
+    if ( !f.open(QIODevice::WriteOnly|QIODevice::Truncate))
     {
         qCritical() << "TTManager::saveConfig / could not write preferences file " << filename;
         return;

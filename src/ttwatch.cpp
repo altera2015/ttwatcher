@@ -141,7 +141,7 @@ bool TTWatch::_openFile(TTFile &file)
     return true;
 }
 
-bool TTWatch::_readFile(QByteArray &dest, const TTFile &file, bool processEvents)
+bool TTWatch::_readFile(QByteArray &dest, const TTFile &file, ProcessCallback cb = nullptr )
 {
     dest.clear();
     const quint8 maxReadSize = 0x32;
@@ -150,10 +150,13 @@ bool TTWatch::_readFile(QByteArray &dest, const TTFile &file, bool processEvents
 
     for ( quint32 pos = 0 ; pos < file.length; pos+= maxReadSize )
     {
-        if ( pos > 0 && processEvents )
+        if ( cb )
         {
-            //QCoreApplication::processEvents();
-            // macos doesn't handle this very well.
+            if ( !cb(pos) )
+            {
+                qDebug() << "TTWatch::_readFile / Callback returned false, aborting.";
+                return false;
+            }
         }
 
         quint8 len = qMin( (quint32)maxReadSize, quint32(file.length - pos) );
@@ -387,7 +390,7 @@ bool TTWatch::deleteFile(quint32 fileId)
     return _deleteFile(f);
 }
 
-bool TTWatch::readFile(QByteArray &data, quint32 fileId, bool processEvents)
+bool TTWatch::readFile(QByteArray &data, quint32 fileId, ProcessCallback cb)
 {
     WatchOpener wo(this);
     if ( !wo.open() )
@@ -405,7 +408,7 @@ bool TTWatch::readFile(QByteArray &data, quint32 fileId, bool processEvents)
         return false;
     }
 
-    bool result = _readFile(data, f, processEvents);
+    bool result = _readFile(data, f, cb);
 
     _closeFile(f);
 
@@ -469,7 +472,7 @@ bool TTWatch::downloadPreferences(QByteArray &data)
         return false;
     }
 
-    if ( readFile(data, FILE_PREFERENCES_XML, true ) )
+    if ( readFile(data, FILE_PREFERENCES_XML ) )
     {
         return true;
     }
@@ -527,7 +530,7 @@ QStringList TTWatch::download(const QString &basePath, bool deleteWhenDone)
 
         QByteArray fileData;
 
-        if ( !readFile( fileData, file.id, true ) )
+        if ( !readFile( fileData, file.id ) )
         {
             qWarning() << "TTWatch::download / failed to download " << file.id;
             continue;
@@ -568,7 +571,7 @@ QStringList TTWatch::download(const QString &basePath, bool deleteWhenDone)
 
         QFile f(filename);
 
-        if ( !f.open( QIODevice::WriteOnly ))
+        if ( !f.open( QIODevice::WriteOnly |QIODevice::Truncate))
         {
             qWarning() << "TTWatch::download / could not open file " << filename;
             continue;

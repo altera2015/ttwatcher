@@ -17,9 +17,9 @@ WatchExporters::WatchExporters(const QString &serial, QObject *parent) :
     m_ExportFinishedCounter(0)
 {
     m_Exporters.append( StravaExporterPtr::create(serial) );
+    m_Exporters.append( SmashrunExporterPtr::create(serial) );
     m_Exporters.append( TCXActivityExporterPtr::create(serial) );
     m_Exporters.append( RunKeeperExporterPtr::create(serial) );
-    m_Exporters.append( SmashrunExporterPtr::create(serial) );
 
     foreach ( IActivityExporterPtr exptr, m_Exporters)
     {        
@@ -135,7 +135,7 @@ bool WatchExporters::exportFile(const QString &filename)
     }
 
     ElevationLoader el;
-    if ( el.load(a, true) != ElevationLoader::SUCCESS )
+    if ( el.load(a, ElevationLoader::USE_SRTMANDNED, true) != ElevationLoader::SUCCESS )
     {
         return false;
     }

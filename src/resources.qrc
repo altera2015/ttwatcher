@@ -31,4 +31,7 @@
     <qresource prefix="/cfg">
         <file>tiles.json</file>
     </qresource>
+    <qresource prefix="/">
+        <file>empty_tile.png</file>
+    </qresource>
 </RCC>

@@ -2,6 +2,9 @@ TEMPLATE = subdirs
 
 SUBDIRS+=ttwatcher
 SUBDIRS+=qhttpserver
+SUBDIRS+=quazip
+
+quazip.file = quazip/quazip/quazip.pro
 
 qhttpserver.file=qhttpserver/src/src.pro
 

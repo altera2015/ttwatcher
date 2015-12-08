@@ -55,6 +55,7 @@ bool MainWindow::processTTBin(const QString& filename)
 
     ui->statusBar->showMessage(tr("Loading Elevation Data..."));
     m_ElevationLoader.load(a);
+
     return true;
 }
 
@@ -97,8 +98,16 @@ void MainWindow::onElevationLoaded(bool success, ActivityPtr activity)
 
         foreach ( TrackPointPtr tp, lap->points())
         {
-            if ( tp->latitude() ==0 && tp->longitude() == 0 )
+            //if ( tp->latitude() !=0 || tp->longitude() != 0 )
+            //{
+
+
+            //}
+
+            if (firstTime == 0 )
             {
+                prev = tp;
+                firstTime = tp->time().toTime_t();
                 continue;
             }
 
@@ -130,18 +139,8 @@ void MainWindow::onElevationLoaded(bool success, ActivityPtr activity)
             }
 
 
-
-
-            if (!prev && firstTime == 0 )
-            {
-                prev = tp;
-                firstTime = tp->time().toTime_t();
-                continue;
-            }
-
-
             ui->mapWidget->addLine(prev->latitude(), prev->longitude(),tp->latitude(),tp->longitude());
-            prev = tp;
+
 
             m_Seconds.append( tp->time().toTime_t() - firstTime );
 
@@ -171,14 +170,9 @@ void MainWindow::onElevationLoaded(bool success, ActivityPtr activity)
 
 
 
-            if ( m_Activity->sport() == Activity::RUNNING )
+            switch ( m_Activity->sport() )
             {                
-                int c = qMin(4, tp->cadence());
-                cadence.add( 60 * c );
-
-            }
-            if ( m_Activity->sport() == Activity::BIKING )
-            {                
+            case Activity::BIKING:
                 cadence.add( tp->cadence() );
 
 
@@ -191,36 +185,94 @@ void MainWindow::onElevationLoaded(bool success, ActivityPtr activity)
                 {
                     speed.add(tp->speed() * 3.6 / 1.60934 ); // mph
                 }
-            }
-            else
+                break;
+
+            case Activity::RUNNING:
             {
+                int c = qMin(4, tp->cadence());
+                cadence.add( 60 * c );
+
                 // use pace
                 if ( m_Settings->useMetric() )
                 {
                     if ( tp->speed() > 0 )
                     {
-                        speed.add(60.0 / ( tp->speed() * 3.6) ); // kmh
+                        double pace = 60.0 / ( tp->speed() * 3.6);
+                        if ( pace > 10 )
+                        {
+                            pace = 10;
+                        }
+                        speed.add( pace ); // kmh
                     }
                     else
                     {
-                        speed.add(10);
+                        speed.add(10); // technically this would be infinite, let's limit it.
                     }
                 }
                 else
                 {
                     if ( tp->speed() > 0 )
                     {
-                        speed.add(60.0 / ( tp->speed() * 3.6 / 1.60934 ) ); // kmh
+                        double pace = 60.0 / ( tp->speed() * 3.6 / 1.60934 );
+                        if ( pace > 16 )
+                        {
+                            pace = 16;
+                        }
+                        speed.add( pace ); // kmh
                     }
                     else
                     {
-                        speed.add(16);
+                        speed.add(16); // technically this would be infinite, let's limit it.
                     }
                 }
+                break;
+            }
+            case Activity::TREADMILL:
+            {
+                // use pace
+                // watch doesn't log speed, only distance.
+
+                int c = qMin(4, tp->cadence());
+                cadence.add( 60 * c );
+
+                double distance = tp->cummulativeDistance() - prev->cummulativeDistance();
+                double spd = 0;
+                int deltaT = prev->time().secsTo(tp->time());
+                if ( deltaT != 0 )
+                {
+                    spd = distance / deltaT ; // ( meters per second )
+                    tp->setSpeed(spd);
+                }
+
+                if ( m_Settings->useMetric() )
+                {
+                    if ( spd > 0 )
+                    {
+                        speed.add( 60.0 / (spd * 3.6) );
+                    }
+                    else
+                    {
+                        speed.add(10); // technically this would be infinite, let's limit it.
+                    }
+                }
+                else
+                {
+                    if ( spd > 0 )
+                    {
+                        speed.add( 60.0 / (spd * 3.6 / 1.60934) );
+                    }
+                    else
+                    {
+                        speed.add(16); // technically this would be infinite, let's limit it.
+                    }
+                }
+                break;
             }
 
-        }
-    }
+            } //switch ( activity )
+            prev = tp;
+        } // loop over points
+    } // loop over laps
 
     m_Cadence.clear();
     m_HeartBeat.clear();
@@ -435,6 +487,63 @@ void MainWindow::closeEvent(QCloseEvent *event)
     }
 }
 
+void MainWindow::uploadActivity()
+{
+    if ( !m_Activity)
+    {
+        ui->statusBar->showMessage(tr("No workout selected."));
+        return;
+    }
+
+    QString filename = m_Activity->filename();
+
+    QFile workout(filename);
+    if ( !workout.open(QIODevice::ReadOnly))
+    {
+        ui->statusBar->showMessage(tr("Could not read TTBin"));
+        return;
+    }
+    QByteArray data = workout.readAll();
+    workout.close();
+
+    const TTWatchList & watches = m_TTManager.watches();
+    if ( watches.count()==0)
+    {
+        ui->statusBar->showMessage(tr("No watch attached to upload to dummy."));
+        return;
+    }
+
+    TTWatch * watch = watches.first();
+    if ( watch->writeFile(data, FILE_TTBIN_DATA, true) )
+    {
+        ui->statusBar->showMessage(tr("Upload success."));
+    }
+    else
+    {
+        ui->statusBar->showMessage(tr("Upload failed."));
+    }
+}
+
+void MainWindow::recalculateElevation()
+{
+    if ( !m_Activity)
+    {
+        return;
+    }
+
+    ui->statusBar->showMessage(tr("Loading Elevation..."));
+
+    ElevationLoader el;
+    if ( el.load(m_Activity, ElevationLoader::USE_SRTMANDNED, true, true) == ElevationLoader::SUCCESS )
+    {
+        onElevationLoaded(true, m_Activity);
+    }
+    else
+    {
+        ui->statusBar->showMessage(tr("Failed to load elevation"));
+    }
+}
+
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     m_Axis3(0),
@@ -559,6 +668,20 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->treeView->addAction( separator );
     ui->treeView->addAction( ui->actionShow_in_explorer);
     ui->treeView->addAction( ui->actionChange_Activity_Type);
+
+#ifdef _DEBUG
+    {
+        QAction * action = new QAction("[DEBUG] Upload Activity to Watch", ui->treeView);
+        connect(action,SIGNAL(triggered()), this, SLOT(uploadActivity()));
+        ui->treeView->addAction(action);
+    }
+#endif
+
+    {
+        QAction *action = new QAction("Recalculate elevation data", ui->treeView);
+        connect(action, SIGNAL(triggered()), this, SLOT(recalculateElevation()));
+        ui->treeView->addAction(action);
+    }
 
     m_TrayIcon = new QSystemTrayIcon(this);
     m_TrayIcon->setIcon( QIcon(":/icons/man360.png"));
@@ -994,7 +1117,7 @@ void MainWindow::on_actionChange_Activity_Type_triggered()
     }
 
     QFile output(item->filename() + ".2.ttbin");
-    if ( !output.open(QIODevice::WriteOnly))
+    if ( !output.open(QIODevice::WriteOnly|QIODevice::Truncate))
     {
         ui->statusBar->showMessage(tr("Failed to change activity type (output open failed)."));
         return;

@@ -37,6 +37,8 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 
 [Files]
 Source: "build32\src\release\ttwatcher.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "build32\quazip\quazip\release\quazip.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "src\south_florida.bridges"; DestDir: "{app}"; Flags: ignoreversion
 Source: "dist\icudt52.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "dist\icuin52.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "dist\icuio52.dll"; DestDir: "{app}"; Flags: ignoreversion

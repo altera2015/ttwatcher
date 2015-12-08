@@ -25,7 +25,7 @@ void SettingsDialog::setStartOnLogin(bool start)
 
     if ( start )
     {
-        if ( !f.open(QIODevice::WriteOnly))
+        if ( !f.open(QIODevice::WriteOnly|QIODevice::Truncate))
         {
             qWarning() << "Could not save ttwatcher.plist.";
             return;

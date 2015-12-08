@@ -161,7 +161,7 @@ void Settings::save()
     d.setObject(o);
 
     QFile f( Settings::settingsFilename() );
-    if ( !f.open(QIODevice::WriteOnly ))
+    if ( !f.open(QIODevice::WriteOnly|QIODevice::Truncate ))
     {
         qDebug() << "Settings::save / could not save settings.";
         return;
@@ -239,7 +239,7 @@ void Settings::saveQuickFix()
     d.setObject(o);
 
     QFile f( Settings::quickFixFilename() );
-    if ( !f.open(QIODevice::WriteOnly ))
+    if ( !f.open(QIODevice::WriteOnly|QIODevice::Truncate ))
     {
         qDebug() << "Settings::saveQuickFix / could not save settings.";
         return;

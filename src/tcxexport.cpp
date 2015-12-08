@@ -147,7 +147,7 @@ void TCXExport::save(QIODevice *dev, ActivityPtr activity)
 
 
 
-            if ( activity->sport() == Activity::RUNNING )
+            if ( activity->sport() == Activity::RUNNING || activity->sport() == Activity::TREADMILL )
             {                
                 stream.writeTextElement("Cadence", QString::number( round(cadence.cea(pos) * 30.0 )));
             }
@@ -185,7 +185,9 @@ void TCXExport::save(QIODevice *dev, ActivityPtr activity)
 
     stream.writeStartElement("Creator");
     stream.writeAttribute("xsi:type","Device_t");
-    stream.writeTextElement("Name", "TomTom GPS Sport Watch (TTWatcher)");
+    // stream.writeTextElement("Name", "TomTom GPS Sport Watch (TTWatcher)");
+    stream.writeTextElement("Name", "Garmin Forerunner 920XT");
+
     stream.writeTextElement("UnitId", "0");
     stream.writeTextElement("ProductID", "0");
     stream.writeStartElement("Version");

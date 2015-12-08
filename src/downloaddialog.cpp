@@ -134,7 +134,7 @@ void DownloadDialog::process()
 
                 workInfo(tr("Downloading Elevation Data for %1.").arg(filename), false);
                 ElevationLoader el;
-                if ( el.load(a, true) != ElevationLoader::SUCCESS )
+                if ( el.load(a, ElevationLoader::USE_SRTMANDNED, true) != ElevationLoader::SUCCESS )
                 {
                     workInfo(tr("failed to download elevation data for %1.").arg(filename), false);
                     continue;

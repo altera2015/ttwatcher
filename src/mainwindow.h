@@ -48,6 +48,7 @@ class MainWindow : public QMainWindow, public QAbstractNativeEventFilter
     void download(bool manualDownload);
     void closeEvent (QCloseEvent *event);
 
+
 public:
     explicit MainWindow(QWidget *parent = 0);
     ~MainWindow();
@@ -60,6 +61,8 @@ public slots:
 private slots:
     void showMe();
     void exportActivity( const QString & exporterName );
+    void uploadActivity();
+    void recalculateElevation();
 
     void onTileChanged();
 

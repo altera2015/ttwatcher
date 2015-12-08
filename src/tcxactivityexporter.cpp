@@ -51,7 +51,7 @@ void TCXActivityExporter::exportActivity(ActivityPtr activity)
     TCXExport e;
 
     QFile f( activity->filename() + ".tcx");
-    if ( !f.open(QIODevice::WriteOnly) )
+    if ( !f.open(QIODevice::WriteOnly|QIODevice::Truncate) )
     {
         emit exportFinished(false, tr("TCX: Could not write file %1.").arg(f.fileName()), QUrl());
         return;

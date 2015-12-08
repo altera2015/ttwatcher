@@ -9,6 +9,7 @@
 #include <QNetworkProxy>
 #include "elevation.h"
 #include "elevationtiledownloaderdialog.h"
+#include "bridge.h"
 
 ElevationLoader::ElevationLoader(QObject * parent) :
     QObject(parent),
@@ -151,7 +152,7 @@ ElevationLoader::Status ElevationLoader::loadSRTM(ActivityPtr activity)
     Elevation e;
     e.prepare();
 
-    QJsonArray elevations;
+
     float lastElevation = 0.0;
 
     foreach ( LapPtr lap, activity->laps() )
@@ -173,7 +174,6 @@ ElevationLoader::Status ElevationLoader::loadSRTM(ActivityPtr activity)
                             ElevationSource source = e.dataSources(p);
                             if ( !source.valid )
                             {
-                                elevations.append(lastElevation);
                                 tp->setAltitude(lastElevation);
                                 break;
                             }
@@ -192,12 +192,10 @@ ElevationLoader::Status ElevationLoader::loadSRTM(ActivityPtr activity)
                             break;
                         }
                         case Elevation::NO_DATA:
-                            elevations.append(lastElevation);
                             tp->setAltitude(lastElevation);
                             break;
                         case Elevation::SUCCESS:
                             lastElevation = elevation;
-                            elevations.append(elevation);
                             tp->setAltitude(elevation);
                             break;
                     }
@@ -206,11 +204,47 @@ ElevationLoader::Status ElevationLoader::loadSRTM(ActivityPtr activity)
         }
     }
 
+    // Bridge Fix
+    BridgeList bl;
+    Bridge::loadBridgeFiles(bl);
+
+    // bl.append( Bridge()); // defaults to jensen beach bridge.
+
+    foreach ( const Bridge & b, bl )
+    {
+        foreach ( LapPtr lap, activity->laps() )
+        {
+            if ( b.isNearBridge(lap->points()))
+            {
+                TrackPointList tpl;
+                foreach ( LapPtr lap, activity->laps() )
+                {
+                    tpl.append( lap->points());
+                }
+                b.fixBridge(tpl);
+                break;
+            }
+        }
+    }
+
+    QJsonArray elevations;
+    foreach ( LapPtr lap, activity->laps() )
+    {
+        foreach ( TrackPointPtr tp, lap->points() )
+        {
+            if ( tp->latitude() != 0 && tp->longitude() != 0 )
+            {
+                elevations.append( tp->altitude());
+            }
+        }
+    }
+
+
     QJsonDocument d;
     d.setArray(elevations);
 
     QFile f( activity->filename() + ".elevation");
-    if ( f.open(QIODevice::ReadWrite) )
+    if ( f.open(QFile::WriteOnly|QFile::Truncate) )
     {
         f.write( d.toJson());
         f.close();

@@ -262,6 +262,24 @@ void SlippyMap::processTile(QPoint &tp, QByteArray &data)
     }
 }
 
+QByteArray SlippyMap::loadEmptyTile()
+{
+    if ( m_EmptyTileData.length() == 0 )
+    {
+        QFile f(":/empty_tile.png");
+        if ( !f.open(QIODevice::ReadOnly))
+        {
+           qDebug() << "SlippyMap::handleData / could not load empty tile from resources";
+        }
+        else
+        {
+            m_EmptyTileData = f.readAll();
+        }
+        f.close();
+    }
+    return m_EmptyTileData;
+}
+
 void SlippyMap::handleNetworkData(QNetworkReply *reply)
 {   
     m_url = 0;
@@ -271,13 +289,18 @@ void SlippyMap::handleNetworkData(QNetworkReply *reply)
 
     m_ActiveRequests.removeOne(reply);
 
-    if (!reply->error())
+    QNetworkReply::NetworkError e = reply->error();
+    QByteArray data;
+    switch ( e )
     {        
-        QByteArray data = reply->readAll();
+    case QNetworkReply::NoError:
+        data = reply->readAll();
         processTile(tp, data);
-    }
-    else
-    {
+        break;
+    case QNetworkReply::ContentNotFoundError:
+        processTile(tp, loadEmptyTile());
+        break;
+    default:
         qDebug() << "SlippyMap::handleData / " << reply->errorString() << (int)reply->error();
         m_Cache->remove( url );
         //download(tp);
@@ -318,16 +341,13 @@ bool SlippyMap::download(QPoint grab)
 {
 
     if ( grab.x()<0 || grab.y()<0)
-    {
-        qDebug() << "SlippyMap::download /x and y less than zero!";
+    {        
+        processTile(grab, loadEmptyTile());
         return true;
     }
 
-
     m_url = QUrl(m_TilePath.arg(zoom).arg(grab.x()).arg(grab.y()));
 
-
-    //qDebug() << m_url;
     QNetworkCacheMetaData md = m_Cache->metaData(m_url);
     QDateTime now = QDateTime::currentDateTime();
 

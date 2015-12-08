@@ -3,6 +3,7 @@ QT       += core gui widgets network printsupport xml
 TARGET = ttwatcher
 TEMPLATE = app
 
+win32:INCLUDEPATH += C:\Qt\5.4.1\src\qtbase\src\3rdparty\zlib
 win32:LIBS +=-lUser32 -lPsapi -lhid -lsetupapi
 win32:RC_FILE = ttwatcher.rc
 linux:CONFIG += c++11
@@ -58,7 +59,15 @@ SOURCES += main.cpp\
     workouttreemodel.cpp \
     qtsingleapplication.cpp \
     qtlocalpeer.cpp \
-    qtlockedfile.cpp
+    qtlockedfile.cpp \
+    elevation.cpp \
+    srtmelevationtile.cpp \
+    gridfloatelevationtile.cpp \
+    elevationtile.cpp \
+    elevationtiledownloaderdialog.cpp \
+    elevationdownloaderitem.cpp \
+    elevationdownloaderitemmodel.cpp \
+    bridge.cpp
 
 win32:SOURCES+=hid.c qtlockedfile_win.cpp
 unix:linux:SOURCES+=hidlinux.c qtlockedfile_unix.cpp
@@ -105,16 +114,26 @@ HEADERS  += mainwindow.h \
     workouttreemodel.h \
     qtsingleapplication.h \
     qtlocalpeer.h \
-    qtlockedfile.h
+    qtlockedfile.h \
+    elevation.h \
+    elevationtile.h \
+    gridfloatelevationtile.h \
+    srtmelevationtile.h \
+    elevationtiledownloaderdialog.h \
+    elevationdownloaderitem.h \
+    elevationdownloaderitemmodel.h \
+    bridge.h
 
 FORMS    += mainwindow.ui \
     settingsdialog.ui \
     aboutdialog.ui \
     downloaddialog.ui \
-    exportworkingdialog.ui
+    exportworkingdialog.ui \
+    elevationtiledownloaderdialog.ui
 
 RESOURCES += \
-    resources.qrc
+    resources.qrc \
+    datasetdownloadericons.qrc
 
 win32:CONFIG(release, debug|release): LIBS += -L$$OUT_PWD/../qhttpserver/src/release/ -lqhttpserver
 else:win32:CONFIG(debug, debug|release): LIBS += -L$$OUT_PWD/../qhttpserver/src/debug/ -lqhttpserver
@@ -134,3 +153,19 @@ OTHER_FILES += \
 
 DISTFILES += \
     runningman2.icns
+
+
+win32:CONFIG(release, debug|release): LIBS += -L$$OUT_PWD/../quazip/quazip/release/ -lquazip
+else:win32:CONFIG(debug, debug|release): LIBS += -L$$OUT_PWD/../quazip/quazip/debug/ -lquazip
+else:unix: LIBS += -L$$OUT_PWD/../quazip/quazip/ -lquazip
+
+INCLUDEPATH += $$PWD/../quazip/quazip
+DEPENDPATH += $$PWD/../quazip/quazip
+
+
+CONFIG(debug, debug|release) {
+    DEFINES += "TT_DEBUG"
+}
+else {
+    DEFINES += "TT_RELEASE"
+}

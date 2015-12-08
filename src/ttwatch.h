@@ -7,7 +7,7 @@
 #include <QStringList>
 
 #include "hidapi.h"
-
+#include <functional>
 
 
 #define FILE_SYSTEM_FIRMWARE        (0x000000f0)
@@ -30,6 +30,8 @@ typedef struct ttfile {
 } TTFile;
 typedef QList<TTFile> TTFileList;
 
+typedef std::function< bool( quint32 bytesProcessed )> ProcessCallback;
+
 class TTWatch : public QObject
 {
     Q_OBJECT
@@ -45,7 +47,7 @@ class TTWatch : public QObject
     static void buildCommand(QByteArray &dest, quint8 command, const TTFile & file);
 
     bool _openFile( TTFile & file );
-    bool _readFile( QByteArray &dest, const TTFile & file, bool processEvents = false );
+    bool _readFile(QByteArray &dest, const TTFile & file, ProcessCallback cb);
     bool _createFile(const TTFile &file );
     bool _writeFile( const QByteArray & source, const TTFile & file, bool processEvents = false);
     bool _closeFile( const TTFile & file );
@@ -95,7 +97,10 @@ public:
     bool close();
     bool listFiles( TTFileList & fl );
     bool deleteFile( quint32 fileId );
-    bool readFile(QByteArray & data , quint32 fileId, bool processEvents = false);
+
+
+
+    bool readFile(QByteArray & data , quint32 fileId, ProcessCallback cb = nullptr );
     bool writeFile(const QByteArray & source, quint32 fileId, bool processEvents = false);
     int batteryLevel();    
 

@@ -4,6 +4,8 @@
 #include <QDir>
 #include <QFile>
 #include <QDebug>
+#include <QLineEdit>
+#include <QDesktopServices>
 
 bool SettingsDialog::isStartOnLogin()
 {
@@ -95,6 +97,8 @@ SettingsDialog::SettingsDialog(Settings *settings, TTManager * ttManager, QWidge
     connect(ui->autoDownloadCheckbox, SIGNAL(clicked()), this, SLOT(onSettingChanged()));
     connect(ui->useMetricCheckBox, SIGNAL(clicked()), this, SLOT(onSettingChanged()));
     connect(ui->startUponLoginCheckbox, SIGNAL(clicked()), this, SLOT(onSettingChanged()));
+    connect(ui->useHighRes, SIGNAL(clicked()), this, SLOT(onSettingChanged()));
+    connect(ui->watchDescriptor, SIGNAL(currentTextChanged(QString)), this, SLOT(onSettingChanged()));
 
     ui->okButton->setEnabled(false);
 
@@ -160,6 +164,8 @@ void SettingsDialog::display()
     ui->useMetricCheckBox->setChecked( m_Settings->useMetric() );
 
     ui->startUponLoginCheckbox->setChecked( isStartOnLogin());
+    ui->useHighRes->setChecked( m_Settings->useHighResolutionElevation() );
+    ui->watchDescriptor->lineEdit()->setText( m_Settings->watchDescriptor() );
 }
 
 void SettingsDialog::displayWatchPreferences()
@@ -233,8 +239,10 @@ void SettingsDialog::onSettingChanged()
 {
     m_Settings->setAutoDownload( ui->autoDownloadCheckbox->isChecked() );
     m_Settings->setUseMetric( ui->useMetricCheckBox->isChecked() );
+    m_Settings->setUseHighResolutionElevation(ui->useHighRes->isChecked());
+    m_Settings->setWatchDescriptor( ui->watchDescriptor->currentText() );
     ui->okButton->setEnabled(true);
-    setStartOnLogin( ui->startUponLoginCheckbox->isChecked());
+    setStartOnLogin( ui->startUponLoginCheckbox->isChecked());    
 }
 
 void SettingsDialog::on_setupButton_clicked()
@@ -271,4 +279,9 @@ void SettingsDialog::on_SettingsDialog_rejected()
     m_TTManager->loadAllConfig();
     m_Settings->load();
     ui->okButton->setEnabled(false);
+}
+
+void SettingsDialog::on_openElevationCacheButton_clicked()
+{
+    QDesktopServices::openUrl(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + "/data/");
 }

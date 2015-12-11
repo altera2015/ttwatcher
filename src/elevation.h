@@ -21,7 +21,7 @@ public:
     void prepare();
     QString basePath () const;
 
-    enum ElevationResult { NO_DATA, NO_TILE, SUCCESS };
+    enum ElevationResult { ER_NO_DATA, ER_NO_TILE, ER_SUCCESS };
     bool hasElevation( const QPointF &p );
     ElevationResult elevation( const QPointF & p, float & elevation );
     ElevationSource dataSources( const QPointF & p );

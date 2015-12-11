@@ -27,6 +27,7 @@
 #include "aboutdialog.h"
 #include "downloaddialog.h"
 #include "centeredexpmovavg.h"
+#include "bridgeeditordialog.h"
 
 #ifdef _WIN32
 #include <dbt.h>
@@ -1140,4 +1141,10 @@ void MainWindow::on_actionChange_Activity_Type_triggered()
     }
 
     ui->statusBar->showMessage(tr("Activity Type changed."));
+}
+
+void MainWindow::on_actionBridge_Editor_triggered()
+{
+    BridgeEditorDialog bed(m_Settings);
+    bed.exec();
 }

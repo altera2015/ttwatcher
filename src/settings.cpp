@@ -16,7 +16,9 @@ Settings::Settings(QObject *parent) :
     m_LastLongitude(-80.174721549999987),
     m_LastZoom(13),
     m_AutoDownload(false),
-    m_UseMetric(true)
+    m_UseMetric(true),
+    m_WatchDescriptor("Garmin Forerunner 920XT"),
+    m_UseHighResElevation(false)
 {
     qDebug()<<Settings::settingsFilename() ;
 }
@@ -147,6 +149,34 @@ void Settings::setUseMetric(bool useMetric)
     }
 }
 
+bool Settings::useHighResolutionElevation() const
+{
+    return m_UseHighResElevation;
+}
+
+void Settings::setUseHighResolutionElevation(bool useHighRes)
+{
+    if ( m_UseHighResElevation != useHighRes )
+    {
+        m_UseHighResElevation = useHighRes;
+        emit useHighResolutionElevationChanged(useHighRes);
+    }
+}
+
+QString Settings::watchDescriptor() const
+{
+    return m_WatchDescriptor;
+}
+
+void Settings::setWatchDescriptor(const QString &descriptor)
+{
+    if ( m_WatchDescriptor != descriptor )
+    {
+        m_WatchDescriptor = descriptor;
+        emit watchDescriptorChanged(descriptor);
+    }
+}
+
 void Settings::save()
 {
     QJsonObject o;
@@ -156,6 +186,8 @@ void Settings::save()
     o["lastZoom"] = lastZoom();
     o["autoDownload"] = autoDownload();
     o["useMetric"] = useMetric();
+    o["useHighResolutionElevation"] = useHighResolutionElevation();
+    o["watchDescriptor"] = watchDescriptor();
 
     QJsonDocument d;
     d.setObject(o);
@@ -216,6 +248,14 @@ void Settings::load()
     if ( settings.contains("useMetric"))
     {
         setUseMetric( settings["useMetric"].toBool());
+    }
+    if ( settings.contains("useHighResolutionElevation"))
+    {
+        setUseHighResolutionElevation(settings["useHighResolutionElevation"].toBool());
+    }
+    if ( settings.contains("watchDescriptor"))
+    {
+        setWatchDescriptor( settings["watchDescriptor"].toString() );
     }
 }
 

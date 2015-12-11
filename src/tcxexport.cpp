@@ -2,6 +2,7 @@
 #include <QDebug>
 #include <centeredexpmovavg.h>
 #include <math.h>
+#include "settings.h"
 
 // http://www.utilities-online.info/xsdvalidation/?save=dbdfe5b3-b776-4e28-8964-3f17c1b54a1c-xsdvalidation
 
@@ -185,8 +186,9 @@ void TCXExport::save(QIODevice *dev, ActivityPtr activity)
 
     stream.writeStartElement("Creator");
     stream.writeAttribute("xsi:type","Device_t");
-    // stream.writeTextElement("Name", "TomTom GPS Sport Watch (TTWatcher)");
-    stream.writeTextElement("Name", "Garmin Forerunner 920XT");
+
+    Settings * settings = Settings::get();
+    stream.writeTextElement("Name", settings->watchDescriptor() );
 
     stream.writeTextElement("UnitId", "0");
     stream.writeTextElement("ProductID", "0");

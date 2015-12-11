@@ -70,6 +70,8 @@ public:
 
     void pan(const QPoint &delta);
     bool geoToScreen( qreal latitude, qreal longitude, QPoint & p ) const;
+    void screenToGeo( const QPoint & p, qreal & latitude, qreal & longitude  ) const;
+
     int boundsToZoom ( const QRectF & bounds );
     QRectF geoBounds();
 

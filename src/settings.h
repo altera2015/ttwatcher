@@ -34,6 +34,11 @@ public:
     bool useMetric() const;
     void setUseMetric( bool useMetric );
 
+    bool useHighResolutionElevation() const;
+    void setUseHighResolutionElevation(bool useHighRes );
+
+    QString watchDescriptor() const;
+    void setWatchDescriptor(const QString & descriptor );
 
     void save();
     void load();
@@ -47,6 +52,8 @@ signals:
     void lastZoomChanged( int zoom );
     void autoDownloadChanged( bool autoDownload );
     void useMetricChanged(bool useMetric);
+    void useHighResolutionElevationChanged(bool useHighRes);
+    void watchDescriptorChanged(QString descriptor);
 
 private:
     QString m_TileUrl;
@@ -55,6 +62,9 @@ private:
     int m_LastZoom;
     bool m_AutoDownload;
     bool m_UseMetric;
+    QString m_WatchDescriptor;
+    bool m_UseHighResElevation;
+
     QMap<QString, QDateTime> m_LastQuickFix;
     void saveQuickFix();
     void loadQuickFix();

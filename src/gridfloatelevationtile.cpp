@@ -4,7 +4,7 @@
 #include <QRegExp>
 #include <QFileInfo>
 #include <QtEndian>
-
+#include "settings.h"
 
 
 
@@ -307,12 +307,17 @@ ElevationSourceList GridFloatElevationTile::dataSetURLs(const QPointF &p)
     QString s1 = QString("%1%2%3%4.zip").arg(ns).arg(lat, 2, 10, QChar('0')).arg(ew).arg(lng, 3, 10, QChar('0'));
 
     //we have NED 0.3333 but these files are huge.
-    /* if ( lookup(":/ned13.txt", s1) )
+
+    Settings * settings = Settings::get();
+    if ( settings->useHighResolutionElevation() )
     {
-        QUrl u(baseUrl + "/vdelivery/Datasets/Staged/NED/13/GridFloat/" + s1 );
-        sourceList.append( ElevationSource( u, "/NED/13/", 0.3333333, "3DEP / USGD", QPointF(slng, slat-1)) );
-        return sourceList;
-    }*/
+        if ( lookup(":/ned13.txt", s1) )
+        {
+            QUrl u(baseUrl + "/vdelivery/Datasets/Staged/NED/13/GridFloat/" + s1 );
+            sourceList.append( ElevationSource( u, "/NED/13/", 0.3333333, "3DEP / USGD", QPointF(slng, slat-1)) );
+            return sourceList;
+        }
+    }
 
     if ( lookup(":/ned1.txt", s1) )
     {

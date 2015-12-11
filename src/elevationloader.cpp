@@ -169,7 +169,7 @@ ElevationLoader::Status ElevationLoader::loadSRTM(ActivityPtr activity)
                     float elevation;
                     switch ( e.elevation(p, elevation) )
                     {
-                        case Elevation::NO_TILE:
+                        case Elevation::ER_NO_TILE:
                         {
                             ElevationSource source = e.dataSources(p);
                             if ( !source.valid )
@@ -191,10 +191,10 @@ ElevationLoader::Status ElevationLoader::loadSRTM(ActivityPtr activity)
                             repeat = true;
                             break;
                         }
-                        case Elevation::NO_DATA:
+                        case Elevation::ER_NO_DATA:
                             tp->setAltitude(lastElevation);
                             break;
-                        case Elevation::SUCCESS:
+                        case Elevation::ER_SUCCESS:
                             lastElevation = elevation;
                             tp->setAltitude(elevation);
                             break;

@@ -67,7 +67,9 @@ SOURCES += main.cpp\
     elevationtiledownloaderdialog.cpp \
     elevationdownloaderitem.cpp \
     elevationdownloaderitemmodel.cpp \
-    bridge.cpp
+    bridge.cpp \
+    bridgeeditordialog.cpp \
+    bridgepointitemmodel.cpp
 
 win32:SOURCES+=hid.c qtlockedfile_win.cpp
 unix:linux:SOURCES+=hidlinux.c qtlockedfile_unix.cpp
@@ -122,14 +124,17 @@ HEADERS  += mainwindow.h \
     elevationtiledownloaderdialog.h \
     elevationdownloaderitem.h \
     elevationdownloaderitemmodel.h \
-    bridge.h
+    bridge.h \
+    bridgeeditordialog.h \
+    bridgepointitemmodel.h
 
 FORMS    += mainwindow.ui \
     settingsdialog.ui \
     aboutdialog.ui \
     downloaddialog.ui \
     exportworkingdialog.ui \
-    elevationtiledownloaderdialog.ui
+    elevationtiledownloaderdialog.ui \
+    bridgeeditordialog.ui
 
 RESOURCES += \
     resources.qrc \

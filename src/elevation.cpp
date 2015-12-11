@@ -8,7 +8,8 @@
 #include <QStandardPaths>
 
 Elevation::Elevation(const QString &basePath) :
-    m_BasePath(basePath)
+    m_BasePath(basePath),
+    m_LastTile(0)
 {
     if ( m_BasePath.length() == 0 )
     {
@@ -119,7 +120,7 @@ Elevation::ElevationResult Elevation::elevation(const QPointF &p, float &elevati
 {
     if ( m_LastTile && m_LastTile->contains(p))
     {
-        return m_LastTile->elevation(p, elevation) ? SUCCESS : NO_DATA;
+        return m_LastTile->elevation(p, elevation) ? ER_SUCCESS : ER_NO_DATA;
     }
 
     ElevationTile * bestTile = 0;
@@ -153,13 +154,13 @@ Elevation::ElevationResult Elevation::elevation(const QPointF &p, float &elevati
             return this->elevation(p, elevation);
         }
 
-        return m_LastTile->elevation(p, elevation) ? SUCCESS : NO_DATA;
+        return m_LastTile->elevation(p, elevation) ? ER_SUCCESS : ER_NO_DATA;
     }
     else
     {
         qDebug() << "Elevation::elevation / no tile for point " << p;
         elevation = 0.0;
-        return NO_TILE;
+        return ER_NO_TILE;
     }
 }
 

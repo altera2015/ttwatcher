@@ -146,6 +146,8 @@
     <addaction name="actionDownload_from_watch"/>
     <addaction name="actionChange_Activity_Type"/>
     <addaction name="actionShow_in_explorer"/>
+    <addaction name="separator"/>
+    <addaction name="actionBridge_Editor"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuEdit"/>
@@ -333,6 +335,11 @@
   <action name="actionChange_Activity_Type">
    <property name="text">
     <string>Change Activity Type...</string>
+   </property>
+  </action>
+  <action name="actionBridge_Editor">
+   <property name="text">
+    <string>Bridge Editor...</string>
    </property>
   </action>
  </widget>

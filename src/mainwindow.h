@@ -105,6 +105,8 @@ private slots:
 
     void on_actionChange_Activity_Type_triggered();
 
+    void on_actionBridge_Editor_triggered();
+
 private:
     Ui::MainWindow *ui;
 };

@@ -406,13 +406,41 @@ bool SlippyMap::geoToScreen( qreal latitude, qreal longitude, QPoint & p ) const
     QPointF offset = m_CenterPoint - req;
 
     // offset now holds the distance (and angle) from the center in tile coordiantes.
-    // multiply by tdim to get screen coordiantes.
+    // multiply by tdim to get screen coordinates.
     QPointF screen = offset * tdim;
 
     p.setX( static_cast<int>( width / 2.0 - screen.x()   ));
     p.setY( static_cast<int>( height / 2.0 - screen.y()  ));
 
     return p.x() >= 0 && p.x() <= width && p.y() >= 0 && p.y() <= height;
+}
+
+void SlippyMap::screenToGeo(const QPoint &p, qreal &latitude, qreal &longitude) const
+{
+    QPointF offset ( (width / 2.0 - p.x()),
+                     (height / 2.0 - p.y()));
+
+    offset /= tdim;
+    offset = m_CenterPoint - offset;
+    latitude = latitudeFromTile( offset.y(), zoom);
+    longitude = longitudeFromTile( offset.x(), zoom);
+
+    while ( latitude > 90 )
+    {
+        latitude -= 90;
+    }
+    while ( latitude < -90 )
+    {
+        latitude += -90;
+    }
+    while ( longitude > 180 )
+    {
+        longitude -= 180;
+    }
+    while ( longitude < -180 )
+    {
+        longitude += 180;
+    }
 }
 
 // bounds calculation from:
@@ -426,6 +454,11 @@ static double latRad( double lat )
 
 static int calc_zoom( double mapPx, double worldPx, double fraction )
 {
+    if ( qFuzzyCompare( fraction, 0.0 ) )
+    {
+        return 18;
+    }
+
     return floor( log(mapPx / worldPx / fraction) / 0.6931471805599453); // 0.6931471805599453 = nat log 2.
 }
 
@@ -438,13 +471,13 @@ int SlippyMap::boundsToZoom(const QRectF &bounds)
     QPointF ne = bounds.topRight();
     QPointF sw = bounds.bottomLeft();
 
-    double latFraction = ( latRad(ne.y()) - latRad( sw.y())) / M_PI;
-    double lngDiff = ne.x() - sw.x();
+    double latFraction = fabs( latRad(ne.y()) - latRad( sw.y())) / M_PI;
+    double lngDiff = fabs(ne.x() - sw.x());
     double lngFraction = ((lngDiff < 0 ) ? ( lngDiff + 360 ) : lngDiff ) / 360;
     int latZoom = calc_zoom( height, worldDim.y(), latFraction);
     int lngZoom = calc_zoom( width, worldDim.x(), lngFraction);
 
-    return qMin( qMin( latZoom, lngZoom), zoomMax);
+    return qMax(0, qMin( qMin( latZoom, lngZoom), zoomMax));
 }
 
 

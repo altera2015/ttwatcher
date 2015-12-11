@@ -44,15 +44,22 @@
 
 LightMaps::LightMaps(QWidget *parent) :
     QWidget(parent),
-    m_Pressed(false),
+
     m_Snapped(false),
     m_Dragging(false),
-    m_Copyright("Map data CCbySA 2009 OpenStreetMap.org contributors")
-
+    m_Copyright("Map data CCbySA 2009 OpenStreetMap.org contributors"),
+    m_SelectedCircle(-1),
+    m_AllowCircleDragging(false),
+    m_InCircleDragging(false)
 {
     m_Map = new SlippyMap(this);
     connect(m_Map, SIGNAL(updated(QRect)), SLOT(updateMap(QRect)));
     connect(m_Map, SIGNAL(updated(QRect)), this, SIGNAL(updated()));
+}
+
+void LightMaps::allowCircleDragging(bool allow)
+{
+    m_AllowCircleDragging = allow;
 }
 
 void LightMaps::setCenter(qreal lat, qreal lng)
@@ -67,6 +74,11 @@ void LightMaps::setCenter(qreal lat, qreal lng)
 
     emit latitudeChanged(lat);
     emit longitudeChanged(lng);
+}
+
+void LightMaps::setCenter(const QPointF &center)
+{
+    setCenter( center.y(), center.x() );
 }
 
 void LightMaps::setCenter(int zoom, qreal lat, qreal lng)
@@ -87,6 +99,11 @@ void LightMaps::setCenter(int zoom, qreal lat, qreal lng)
     emit latitudeChanged(lat);
     emit longitudeChanged(lng);
     emit zoomChanged(zoom);
+}
+
+void LightMaps::setCenter(int zoom, const QPointF &center)
+{
+    setCenter(zoom, center.y(), center.x());
 }
 
 void LightMaps::setLatitude( qreal lat)
@@ -122,6 +139,11 @@ qreal LightMaps::longitude() const
     return m_Map->longitude;
 }
 
+QPointF LightMaps::center() const
+{
+    return QPointF(m_Map->longitude, m_Map->latitude);
+}
+
 void LightMaps::updateMap(const QRect &r)
 {
     update(r);
@@ -141,10 +163,10 @@ void LightMaps::paintEvent(QPaintEvent *event)
 
     m_Map->render(&p, event->rect());
 
-    QPen pen;
-    pen.setColor(Qt::red);
-    pen.setWidth(3);
-    p.setPen(pen);
+    QPen red_pen;
+    red_pen.setColor(Qt::red);
+    red_pen.setWidth(3);
+    p.setPen(red_pen);
 
     QPolygon polygon;
     // Draw graphics over the top.
@@ -171,13 +193,14 @@ void LightMaps::paintEvent(QPaintEvent *event)
 
     }
 
-    QPen pen_blue;
-    pen_blue.setColor(Qt::blue);
-    pen_blue.setWidth(3);
-    p.setPen(pen_blue);
+    QPen blue_pen;
+    blue_pen.setColor(Qt::blue);
+    blue_pen.setWidth(3);
+    p.setPen(blue_pen);
 
-    foreach ( const QPointF& pf, m_Circles )
+    for (int i=0;i<m_Circles.count();i++)
     {
+        const QPointF &pf = m_Circles[i];
         QPoint p1;
         bool centerVisible = geoToScreen( pf.y(), pf.x(), p1);
 
@@ -187,6 +210,14 @@ void LightMaps::paintEvent(QPaintEvent *event)
         }
 
 
+        if ( i == m_SelectedCircle )
+        {
+            p.setPen(red_pen);
+        }
+        else
+        {
+            p.setPen(blue_pen);
+        }
 
         p.drawEllipse(p1, 6,6);
 
@@ -220,62 +251,123 @@ void LightMaps::timerEvent(QTimerEvent *)
 void LightMaps::mousePressEvent(QMouseEvent *event)
 {
     if (event->buttons() != Qt::LeftButton)
+    {
         return;
-    m_Pressed = m_Snapped = true;
+    }
+
+    m_Snapped = true;
     m_PressPos = m_DragPos = event->pos();
+
+    if ( m_AllowCircleDragging )
+    {
+        int newIndex = circleHitTest(event->pos());
+        if ( newIndex >= 0 )
+        {
+            m_SelectedCircle = newIndex;
+            emit circleSelected(m_SelectedCircle, m_DragPos);
+        }
+        else
+        {
+            if (m_SelectedCircle >= 0 )
+            {
+                emit circleUnselected(m_SelectedCircle);
+                m_SelectedCircle = -1;
+            }
+        }
+        update();
+        return;
+    }
 }
 
 void LightMaps::mouseMoveEvent(QMouseEvent *event)
 {
-    if (!event->buttons())
-        return;
-
-    if (!m_Pressed || !m_Snapped)
+    if (event->buttons() == Qt::NoButton )
     {
-        QPoint delta = event->pos() - m_PressPos;
-        m_PressPos = event->pos();
-        m_Map->pan(delta);
-        emit dragBegin();
-        m_Dragging = true;
+        QPointF geo;
+        screenToGeo(event->pos(), geo);
+        emit mouseMove(geo);
         return;
+    }
+
+
+    if (m_Snapped)
+    {        
+        QPoint delta = event->pos() - m_PressPos;
+        m_Snapped = (delta.x() * delta.x() + delta.y() * delta.y()) < 25;
+
+        if ( m_Snapped )
+        {
+            return;
+        }
+
+        if ( m_AllowCircleDragging && m_SelectedCircle >= 0 )
+        {
+            // not dragging, we're in a circle!
+            m_InCircleDragging = true;
+            return;
+        }
+
+        m_Dragging = true;
+        emit dragBegin();
+
     }
     else
     {
-        const int threshold = 10;
-        QPoint delta = event->pos() - m_PressPos;
-        if (m_Snapped)
+        if ( m_AllowCircleDragging && m_InCircleDragging )
         {
-            m_Snapped &= delta.x() < threshold;
-            m_Snapped &= delta.y() < threshold;
-            m_Snapped &= delta.x() > -threshold;
-            m_Snapped &= delta.y() > -threshold;
+            screenToGeo(event->pos(), m_Circles[m_SelectedCircle] );
+            update();
+            return;
         }
-    }
 
+        // if we are not dragging a circle we are panning the map.
+        QPoint delta = event->pos() - m_PressPos;
+        m_PressPos = event->pos();
+        m_Map->pan(delta);                     
+    }
 }
 
-void LightMaps::mouseReleaseEvent(QMouseEvent *)
+void LightMaps::mouseReleaseEvent(QMouseEvent *event)
 {
-    if ( m_Dragging ) {
+    if ( m_Dragging )
+    {
         emit dragEnd();
         m_Dragging = false;
+        m_Snapped = false;
+        update();
+        return;
     }
 
-    update();
+    if ( m_InCircleDragging )
+    {
+        emit circleMoved(m_SelectedCircle, m_Circles[m_SelectedCircle]);
+        m_InCircleDragging = false;
+        update();
+        return;
+    }
+
+    qreal latitude, longitude;
+    screenToGeo( event->pos(), latitude, longitude );
+    mouseUp( latitude, longitude );
 }
 
 void LightMaps::keyPressEvent(QKeyEvent *event)
 {
-
-    if (event->key() == Qt::Key_Left)
-        m_Map->pan(QPoint(20, 0));
-    if (event->key() == Qt::Key_Right)
-        m_Map->pan(QPoint(-20, 0));
-    if (event->key() == Qt::Key_Up)
-        m_Map->pan(QPoint(0, 20));
-    if (event->key() == Qt::Key_Down)
-        m_Map->pan(QPoint(0, -20));
-
+    switch ( event->key() )
+    {
+    case Qt::Key_Left:
+        m_Map->pan(QPoint(20,0));
+        break;
+    case Qt::Key_Right:
+        m_Map->pan(QPoint(-20,0));
+        break;
+    case Qt::Key_Up:
+        m_Map->pan(QPoint(0,20));
+        break;
+    case Qt::Key_Down:
+        m_Map->pan(QPoint(-20,0));
+        break;
+    }
 }
 
 void LightMaps::wheelEvent(QWheelEvent *event)
@@ -288,7 +380,6 @@ void LightMaps::wheelEvent(QWheelEvent *event)
     {
         setZoom( zoom() + 1 );
     }
-
 }
 
 void LightMaps::setZoom(int zoom)
@@ -309,9 +400,27 @@ int LightMaps::zoom() const
     return m_Map->zoom;
 }
 
+bool LightMaps::geoToScreen(const QPointF &circle, QPoint &p) const
+{
+    return m_Map->geoToScreen(circle.y(), circle.x(), p);
+}
+
 bool LightMaps::geoToScreen(qreal latitude, qreal longitude, QPoint &p) const
 {
     return m_Map->geoToScreen(latitude, longitude, p);
+}
+
+void LightMaps::screenToGeo(const QPoint &p, qreal &latitude, qreal &longitude) const
+{
+    m_Map->screenToGeo(p, latitude, longitude);
+}
+
+void LightMaps::screenToGeo(const QPoint &p, QPointF &geo) const
+{
+    qreal lat, lng;
+    m_Map->screenToGeo(p, lat, lng);
+    geo.setX(lng);
+    geo.setY(lat);
 }
 
 int LightMaps::boundsToZoom(const QRectF &bounds)
@@ -338,11 +447,62 @@ void LightMaps::addLine(qreal latitude1, qreal longitude1, qreal latitude2, qrea
 void LightMaps::clearCircles()
 {
     m_Circles.clear();
+    m_SelectedCircle = -1;
 }
 
 void LightMaps::addCircle(qreal latitude, qreal longitude)
 {
     m_Circles.append( QPointF( longitude, latitude ));
+}
+
+void LightMaps::addCircle(const QPointF &geo)
+{
+    m_Circles.append( geo );
+}
+
+const QList<QPointF> LightMaps::circles() const
+{
+    return m_Circles;
+}
+
+void LightMaps::removeCircle(int index)
+{
+    if ( index < 0 || index >= m_Circles.count() )
+    {
+        return;
+    }
+
+    if ( m_SelectedCircle >= 0 )
+    {
+        emit circleUnselected(m_SelectedCircle);
+    }
+
+    m_SelectedCircle = -1;
+    m_Circles.removeAt(index);
+    update();
+}
+
+void LightMaps::selectCircle(int index)
+{
+    m_SelectedCircle = index;
+    update();
+}
+
+int LightMaps::circleHitTest(const QPoint &p, int pixelRadius)
+{
+    for (int i=0;i<m_Circles.count();i++)
+    {
+        QPoint cp;
+        if (geoToScreen(m_Circles[i], cp))
+        {
+            QPoint delta = p - cp;
+            if ( delta.x() * delta.x() + delta.y() * delta.y() <= pixelRadius * pixelRadius )
+            {
+                return i;
+            }
+        }
+    }
+    return -1;
 }
 
 void LightMaps::setTilePath(const QString &tilePath, const QString &copyright)

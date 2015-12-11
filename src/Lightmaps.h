@@ -58,20 +58,29 @@ class LightMaps: public QWidget
 
     QList<QRectF> m_Lines;
     QList<QPointF> m_Circles;
+    int m_SelectedCircle;
+    bool m_AllowCircleDragging;
+    bool m_InCircleDragging;
 
 public:
     LightMaps(QWidget *parent = 0);
-
+    void allowCircleDragging( bool allow );
     void setCenter(qreal lat, qreal lng);
+    void setCenter(const QPointF & center);
     void setCenter(int zoom, qreal lat, qreal lng);
+    void setCenter(int zoom, const QPointF & center);
 
     void setLatitude( qreal lat);
     void setLongitude( qreal lng );
     qreal latitude() const;
     qreal longitude() const;
+    QPointF center() const;
     void setZoom ( int zoom );
     int zoom( ) const;
+    bool geoToScreen( const QPointF & circle, QPoint &p) const;
     bool geoToScreen( qreal latitude, qreal longitude, QPoint & p ) const;
+    void screenToGeo( const QPoint & p, qreal & latitude, qreal & longitude  ) const;
+    void screenToGeo( const QPoint & p, QPointF &geo  ) const;
     int boundsToZoom ( const QRectF & bounds );
     QRectF geoBounds();
 
@@ -80,8 +89,14 @@ public:
 
     void clearCircles();
     void addCircle( qreal latitude, qreal longitude );    
+    void addCircle( const QPointF & geo );
+    const QList<QPointF> circles() const;
+    void removeCircle( int index );
+    void selectCircle( int index ) ;
+    int circleHitTest( const QPoint & p, int pixelRadius = 6);
 
     void setTilePath( const QString & tilePath, const QString & copyright );
+
 
 private slots:
     void updateMap(const QRect &r);
@@ -105,10 +120,17 @@ signals:
     void updated();
     void dragEnd();
     void dragBegin();
+    void mouseUp( qreal latitude, qreal longitude );
+    void circleMouseDown( int index, QPoint p );
+    void circleMouseUp( int index, QPoint p );
+    void circleSelected( int index, QPoint p );
+    void circleUnselected( int lastIndex );
+    void circleMoved( int index, QPointF geo );
+    void mouseMove( QPointF pos );
+
 
 private:
-    SlippyMap *m_Map;
-    bool m_Pressed;
+    SlippyMap *m_Map;    
     bool m_Snapped;
     bool m_Dragging;
     QPoint m_PressPos;

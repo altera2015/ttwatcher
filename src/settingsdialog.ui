@@ -185,6 +185,57 @@
         </widget>
        </item>
        <item>
+        <widget class="QCheckBox" name="useHighRes">
+         <property name="text">
+          <string>Use High Resolution Elevation Data.</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="label_2">
+         <property name="text">
+          <string>Note: High Resolution Elevation data is a large file to download. Also if you previously loaded the lower resolution data you need to delete the tile from the elevation cache. ( in the appdata directory under ttwatcher).</string>
+         </property>
+         <property name="wordWrap">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="openElevationCacheButton">
+         <property name="text">
+          <string>Open Elevation Cache</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QComboBox" name="watchDescriptor">
+         <property name="editable">
+          <bool>true</bool>
+         </property>
+         <item>
+          <property name="text">
+           <string>Garmin Forerunner 920XT</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>TomTom GPS Sport Watch</string>
+          </property>
+         </item>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="label_4">
+         <property name="text">
+          <string>Note: Strava will discard any elevation data provided if you have the setting above set to TomTom. This is because the elevation data provided by default by TomTom is very lacking. You can 'force' Strava to use our elevation data by setting the box above to Garmin Forerunner 920XT. This allows you to use the Bridge Fix feature of this application have that show up in Strava.</string>
+         </property>
+         <property name="wordWrap">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item>
         <spacer name="verticalSpacer_2">
          <property name="orientation">
           <enum>Qt::Vertical</enum>

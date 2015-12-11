@@ -45,6 +45,8 @@ private slots:
 private slots:
     void display();
 
+    void on_openElevationCacheButton_clicked();
+
 private:
     Ui::SettingsDialog *ui;
 

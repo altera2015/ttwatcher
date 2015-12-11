@@ -43,6 +43,8 @@ Original inspiration from:
 * Built with Qt 5.4 LGPL http://www.qt-project.org
 * qhttpserver from https://github.com/nikhilm/qhttpserver
 * QuaZIP from http://quazip.sourceforge.net/
+* Elevation data from NED database http://nationalmap.gov/elevation.html
+* Elevation data from SRTM NASA Shuttle missions http://www2.jpl.nasa.gov/srtm/
 
 # Building
 

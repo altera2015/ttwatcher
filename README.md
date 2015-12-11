@@ -42,6 +42,7 @@ Original inspiration from:
 * QCustomPlot, an easy to use, modern plotting widget for Qt, Copyright (C) 2011, 2012, 2013, 2014 Emanuel Eichhammer http://www.qcustomplot.com/
 * Built with Qt 5.4 LGPL http://www.qt-project.org
 * qhttpserver from https://github.com/nikhilm/qhttpserver
+* QuaZIP from http://quazip.sourceforge.net/
 
 # Building
 

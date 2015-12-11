@@ -142,7 +142,7 @@ void Bridge::initialize()
     }
 }
 
-Bridge::Bridge(const QString &name, const QList<BridgePoint> &bridge, double captureWidth) :
+Bridge::Bridge(const QString &name, const BridgePointList &bridge, double captureWidth) :
     m_Name(name),
     m_Bridge(bridge),
     m_CaptureWidth(captureWidth)
@@ -150,15 +150,11 @@ Bridge::Bridge(const QString &name, const QList<BridgePoint> &bridge, double cap
     initialize();
 }
 
-Bridge::Bridge()
+Bridge::Bridge(const QString &name, double captureWidth) : m_Name(name), m_CaptureWidth(captureWidth)
 {
-    m_Name = "Jensen Beach";
-    m_Bridge.append( BridgePoint(27.2527,-80.2210, 1.0));
-    m_Bridge.append( BridgePoint(27.2531,-80.2193, 20.0));
-    m_Bridge.append( BridgePoint(27.2536,-80.2177, 1.0));
-    m_CaptureWidth = 20;
-    initialize();
+
 }
+
 
 bool Bridge::isNearBridge(TrackPointList track) const
 {
@@ -235,6 +231,36 @@ bool Bridge::fixBridge(TrackPointList track) const
         }
     }
     return result;
+}
+
+const QString Bridge::name() const
+{
+    return m_Name;
+}
+
+void Bridge::setName(const QString &name)
+{
+    m_Name = name;
+}
+
+const double Bridge::captureWidth() const
+{
+    return m_CaptureWidth;
+}
+
+void Bridge::setCaptureWidth(double captureWidth)
+{
+    m_CaptureWidth = captureWidth;
+}
+
+BridgePointList &Bridge::points()
+{
+    return m_Bridge;
+}
+
+const BridgePointList &Bridge::constPoints() const
+{
+    return m_Bridge;
 }
 
 bool Bridge::loadBridgeFile(const QString &filename, BridgeList &bridgeList)
@@ -336,6 +362,45 @@ bool Bridge::loadBridgeFiles(BridgeList &bridgeList)
 #endif
     allOk &= loadBridgeFiles(dir, bridgeList);
     return allOk;
+}
+
+bool Bridge::saveBridgeFile(const QString &filename, BridgeList &bridgeList)
+{
+    QFile f(filename);
+    if ( !f.open(QIODevice::WriteOnly| QIODevice::Truncate))
+    {
+        return false;
+    }
+
+    QJsonArray bridges;
+
+    foreach ( const Bridge & bridge, bridgeList)
+    {
+        QJsonObject jBridge;
+
+        jBridge["name"] = bridge.name();
+        jBridge["captureWidth"] = bridge.captureWidth();
+
+        QJsonArray jPoints;
+
+        foreach ( const BridgePoint & bp, bridge.constPoints() )
+        {
+            QJsonArray jPoint;
+            jPoint.append( bp.coordinate().x() );
+            jPoint.append( bp.coordinate().y() );
+            jPoint.append( bp.elevation() );
+            jPoints.append(jPoint);
+        }
+        jBridge["points"] = jPoints;
+
+        bridges.append(jBridge);
+    }
+
+    QJsonDocument d;
+    d.setArray(bridges);
+    f.write( d.toJson() );
+    f.close();
+    return true;
 }
 
 

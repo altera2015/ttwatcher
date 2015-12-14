@@ -53,6 +53,7 @@ QPointF calcOffset( const QPointF &orig, double dlng, double dlat )
 bool Bridge::isOnBridge(const QPointF &p, double & elevation, int & index ) const
 {
     double closests = 10000000;
+    bool closestsWasInBetweenPoints = false;
 
     for (int i=0;i<m_Bridge.count()-1;i++)
     {
@@ -84,6 +85,7 @@ bool Bridge::isOnBridge(const QPointF &p, double & elevation, int & index ) cons
                 closests = distance;
                 QLineF partial(bpA.coordinate(), intersectPoint);
                 elevation = bpA.elevation() + (( bpB.elevation() - bpA.elevation() ) * partial.length())  / bridgeSegment.length();
+                closestsWasInBetweenPoints = true;
             }
         }
         else
@@ -96,19 +98,37 @@ bool Bridge::isOnBridge(const QPointF &p, double & elevation, int & index ) cons
                 index = i;
                 closests = distanceToA;
                 elevation = bpA.elevation();
+                closestsWasInBetweenPoints = false;
             }
             if ( distanceToB < closests )
             {
                 index = i+1;
                 closests = distanceToB;
                 elevation = bpB.elevation();
+                closestsWasInBetweenPoints = false;
             }
         }
 
 
     }
 
-    return ( closests < m_CaptureWidth );
+    // if the closets points were the first or last point
+    // of a bridge we don't extend the bridge by the capture width.
+    if ( closestsWasInBetweenPoints )
+    {
+        return ( closests < m_CaptureWidth );
+    }
+    else
+    {
+        if ( index == 0 || ( index + 1 ) == m_Bridge.count())
+        {
+            return false;
+        }
+        else
+        {
+            return ( closests < m_CaptureWidth );
+        }
+    }
 }
 
 void Bridge::initialize()
@@ -207,9 +227,8 @@ bool Bridge::fixBridge(TrackPointList track) const
             {
                 missedPoints++;
                 if ( missedPoints > 10 )
-                {
-                    double fraction = fabs( lengthOnBridge - m_Length ) / m_Length;
-                    if ( fraction < .25 )
+                {                    
+                    if ( lengthOnBridge > m_Length * 0.9 )
                     {
                         // we ran the bridge.
                         QMap<int, double>::iterator it = elevationMap.begin();
@@ -226,6 +245,7 @@ bool Bridge::fixBridge(TrackPointList track) const
                     elevationMap.clear();
                     missedPoints = 0;
                     indexes.clear();
+                    lengthOnBridge = 0.0;
                 }
             }
         }
@@ -350,16 +370,17 @@ bool Bridge::loadBridgeFiles(const QString &dir, BridgeList &bridgeList)
 
 bool Bridge::loadBridgeFiles(BridgeList &bridgeList)
 {
-    bool allOk = true;
-    QString dir = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + QDir::separator();
+    bool allOk = true;    
+    QString dir;
 
-    allOk &= loadBridgeFiles(dir, bridgeList);
 #ifdef TT_DEBUG
-
     dir = QApplication::applicationDirPath() + "/../../../src";
 #else
     dir = QApplication::applicationDirPath();
 #endif
+    allOk &= loadBridgeFiles(dir, bridgeList);
+
+    dir = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + QDir::separator();
     allOk &= loadBridgeFiles(dir, bridgeList);
     return allOk;
 }

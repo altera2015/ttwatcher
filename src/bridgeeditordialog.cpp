@@ -8,7 +8,11 @@
 
 QString BridgeEditorDialog::baseDir() const
 {
+#ifdef TT_DEBUG
+    return QApplication::applicationDirPath() + "/../../../src";
+#else
     return QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + QDir::separator();
+#endif
 }
 
 

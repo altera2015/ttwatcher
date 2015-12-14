@@ -55,9 +55,14 @@ static unsigned int qHash(const QPoint& p)
     return p.x() * 17 ^ p.y();
 }
 
+QPointF SlippyMap::tileForCoordinate(const QPointF & geo, int zoom)
+{
+    return tileForCoordinate(geo.y(), geo.x(), zoom);
+}
+
 
 // Mercator projection calculations.
-static QPointF tileForCoordinate(qreal lat, qreal lng, int zoom)
+QPointF SlippyMap::tileForCoordinate(qreal lat, qreal lng, int zoom)
 {
     qreal zn = static_cast<qreal>(1 << zoom);
     qreal tx = (lng + 180.0) / 360.0;
@@ -415,13 +420,13 @@ bool SlippyMap::geoToScreen( qreal latitude, qreal longitude, QPoint & p ) const
     return p.x() >= 0 && p.x() <= width && p.y() >= 0 && p.y() <= height;
 }
 
-void SlippyMap::screenToGeo(const QPoint &p, qreal &latitude, qreal &longitude) const
+void SlippyMap::screenToGeo(const QPointF &centerPoint, int zoom, const QPoint &p, qreal &latitude, qreal &longitude) const
 {
     QPointF offset ( (width / 2.0 - p.x()),
                      (height / 2.0 - p.y()));
 
     offset /= tdim;
-    offset = m_CenterPoint - offset;
+    offset = centerPoint - offset;
     latitude = latitudeFromTile( offset.y(), zoom);
     longitude = longitudeFromTile( offset.x(), zoom);
 
@@ -441,6 +446,11 @@ void SlippyMap::screenToGeo(const QPoint &p, qreal &latitude, qreal &longitude) 
     {
         longitude += 180;
     }
+}
+
+void SlippyMap::screenToGeo(const QPoint &p, qreal &latitude, qreal &longitude) const
+{
+    screenToGeo(m_CenterPoint, zoom, p, latitude, longitude);
 }
 
 // bounds calculation from:

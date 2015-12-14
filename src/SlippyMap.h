@@ -70,6 +70,7 @@ public:
 
     void pan(const QPoint &delta);
     bool geoToScreen( qreal latitude, qreal longitude, QPoint & p ) const;
+    void screenToGeo( const QPointF & centerPoint, int zoom, const QPoint & p, qreal & latitude, qreal & longitude ) const;
     void screenToGeo( const QPoint & p, qreal & latitude, qreal & longitude  ) const;
 
     int boundsToZoom ( const QRectF & bounds );
@@ -78,6 +79,8 @@ public:
     void cancelDownloads();
     void setTilePath( const QString & tilePath );
 
+    static QPointF tileForCoordinate(qreal lat, qreal lng, int zoom);
+    static QPointF tileForCoordinate(const QPointF & geo, int zoom);
 private slots:
 
     void handleNetworkData(QNetworkReply *reply);

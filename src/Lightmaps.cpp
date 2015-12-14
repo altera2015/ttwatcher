@@ -372,14 +372,32 @@ void LightMaps::keyPressEvent(QKeyEvent *event)
 
 void LightMaps::wheelEvent(QWheelEvent *event)
 {
+    QPoint pos = event->pos();
+    QPointF geo;
+    screenToGeo(pos, geo); // coordinates under cursor currently.
+    // update zoom level
+    int zoom = this->zoom();
     if ( event->delta() < 0 )
     {
-        setZoom( zoom() - 1 );
+        zoom--;
     }
     else
     {
-        setZoom( zoom() + 1 );
+        zoom++;
     }
+    if ( zoom < 0 )
+    {
+        zoom = 0;
+    }
+    if ( zoom > 18 )
+    {
+        zoom = 18;
+    }
+    QPoint viewPort ( this->width(), this->height());
+    QPoint newCenter = viewPort - pos;
+    double latitude, longitude;
+    m_Map->screenToGeo( SlippyMap::tileForCoordinate(geo,zoom), zoom, newCenter, latitude, longitude);
+    setCenter(zoom, latitude, longitude);
 }
 
 void LightMaps::setZoom(int zoom)

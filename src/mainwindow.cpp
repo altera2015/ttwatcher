@@ -90,7 +90,7 @@ void MainWindow::onElevationLoaded(bool success, ActivityPtr activity)
     CenteredExpMovAvg cadence(61, 0.95);
     CenteredExpMovAvg speed(21, 0.95);
     CenteredExpMovAvg heartBeat(31, 0.95);
-    CenteredExpMovAvg altitude(61, 0.95);
+    CenteredExpMovAvg altitude(4, 0.1);
 
     TrackPointPtr prev;
 
@@ -992,8 +992,9 @@ void MainWindow::on_actionShow_Speed_toggled(bool arg1)
 {
     if ( ui->graph->graphCount() >= 2 )
     {
+        ui->graph->yAxis2->setVisible(arg1);
         ui->graph->graph(1)->setVisible(arg1);
-        ui->graph->replot();
+        ui->graph->replot();        
     }
 }
 
@@ -1003,8 +1004,9 @@ void MainWindow::on_actionShow_Heart_Rate_toggled(bool arg1)
 {
     if ( ui->graph->graphCount() >= 1 )
     {
+        ui->graph->yAxis->setVisible(arg1);
         ui->graph->graph(0)->setVisible(arg1);
-        ui->graph->replot();
+        ui->graph->replot();        
     }
 }
 
@@ -1012,8 +1014,9 @@ void MainWindow::on_actionShow_Cadence_toggled(bool arg1)
 {
     if ( ui->graph->graphCount() >= 3 )
     {
+        m_Axis3->setVisible(arg1);
         ui->graph->graph(2)->setVisible(arg1);
-        ui->graph->replot();
+        ui->graph->replot();        
     }
 }
 
@@ -1021,8 +1024,9 @@ void MainWindow::on_actionShow_Elevation_toggled(bool arg1)
 {
     if ( ui->graph->graphCount() >= 4 )
     {
+        m_Axis4->setVisible(arg1);
         ui->graph->graph(3)->setVisible(arg1);
-        ui->graph->replot();
+        ui->graph->replot();        
     }
 }
 

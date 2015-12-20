@@ -267,7 +267,7 @@ void SlippyMap::processTile(QPoint &tp, QByteArray &data)
     }
 }
 
-QByteArray SlippyMap::loadEmptyTile()
+QByteArray & SlippyMap::loadEmptyTile()
 {
     if ( m_EmptyTileData.length() == 0 )
     {

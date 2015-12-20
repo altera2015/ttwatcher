@@ -283,5 +283,9 @@ void SettingsDialog::on_SettingsDialog_rejected()
 
 void SettingsDialog::on_openElevationCacheButton_clicked()
 {
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 4, 0))
     QDesktopServices::openUrl(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + "/data/");
+#else
+    QDesktopServices::openUrl(QStandardPaths::writableLocation(QStandardPaths::DataLocation) + "/data/");
+#endif
 }

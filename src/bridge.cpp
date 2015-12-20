@@ -1,6 +1,6 @@
 #include "bridge.h"
 #include <QDebug>
-#include <QlineF>
+#include <QLineF>
 #include <QMarginsF>
 #include <QMap>
 #include <QPolygonF>
@@ -380,7 +380,12 @@ bool Bridge::loadBridgeFiles(BridgeList &bridgeList)
 #endif
     allOk &= loadBridgeFiles(dir, bridgeList);
 
-    dir = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + QDir::separator();
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 4, 0))
+    dir = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + QDir::separator() ;
+#else
+    dir = QStandardPaths::writableLocation(QStandardPaths::DataLocation) + QDir::separator();
+#endif
+
     allOk &= loadBridgeFiles(dir, bridgeList);
     return allOk;
 }

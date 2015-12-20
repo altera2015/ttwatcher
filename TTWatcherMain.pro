@@ -10,3 +10,6 @@ qhttpserver.file=qhttpserver/src/src.pro
 
 ttwatcher.file=src/ttwatcher.pro
 ttwatcher.depends += qhttpserver
+ttwatcher.depends += quazip
+
+

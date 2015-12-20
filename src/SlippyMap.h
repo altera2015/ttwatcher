@@ -54,7 +54,7 @@ class SlippyMap: public QObject
     QNetworkDiskCache * m_Cache;
     void processTile(QPoint & tp, QByteArray & data );
     QByteArray m_EmptyTileData;
-    QByteArray loadEmptyTile();
+    QByteArray & loadEmptyTile();
 public:
     int width;
     int height;

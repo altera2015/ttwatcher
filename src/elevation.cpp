@@ -13,7 +13,13 @@ Elevation::Elevation(const QString &basePath) :
 {
     if ( m_BasePath.length() == 0 )
     {
+
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 4, 0))
         m_BasePath = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + QDir::separator() + "data/";
+#else
+        m_BasePath = QStandardPaths::writableLocation(QStandardPaths::DataLocation) + QDir::separator() + "data/";
+#endif
+
         qDebug() << "Elevation using " << m_BasePath;
     }
 

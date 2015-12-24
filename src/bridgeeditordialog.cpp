@@ -11,7 +11,7 @@ QString BridgeEditorDialog::baseDir() const
 #ifdef TT_DEBUG
     return QApplication::applicationDirPath() + "/../../../src";
 #else
-    return QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + QDir::separator();
+    return QStandardPaths::writableLocation(QStandardPaths::DataLocation) + QDir::separator();
 #endif
 }
 
@@ -304,12 +304,14 @@ void BridgeEditorDialog::currentBridgeChanged(int index)
 
 void BridgeEditorDialog::bridgePointSelected(int index, QPoint pos)
 {
+    Q_UNUSED(pos);
     m_Model.selectPoint(index);
     ui->removeBridgePoint->setEnabled(true);
 }
 
 void BridgeEditorDialog::bridgePointUnselected(int index)
 {
+    Q_UNUSED(index);
     m_Model.selectPoint(-1);
     ui->removeBridgePoint->setEnabled(false);
 }
@@ -336,11 +338,8 @@ void BridgeEditorDialog::mapClicked(qreal latitude, qreal longitude)
 
     QPointF pos(longitude, latitude);
     float elevation = 0.0;
-    switch ( m_Elevation.elevation(pos, elevation) )
+    if ( m_Elevation.elevation(pos, elevation) == Elevation::ER_NO_TILE )
     {
-    case Elevation::ER_NO_TILE:
-    {
-
         ElevationSource source = m_Elevation.dataSources(pos);
         if ( source.valid )
         {
@@ -353,7 +352,6 @@ void BridgeEditorDialog::mapClicked(qreal latitude, qreal longitude)
                 return;
             }
         }
-    }
     }
 
     setChanged(true);

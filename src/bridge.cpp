@@ -1,7 +1,6 @@
 #include "bridge.h"
 #include <QDebug>
 #include <QLineF>
-#include <QMarginsF>
 #include <QMap>
 #include <QPolygonF>
 #include "geodistance.h"
@@ -142,16 +141,12 @@ void Bridge::initialize()
     }
 
     m_Bounds = poly.boundingRect();
-    //qDebug() << "BOUNDS "<<m_Bounds << m_Bounds.topLeft() << m_Bounds.bottomRight();
 
     QPointF offset = calcOffset(m_Bounds.center(), m_CaptureWidth*2, m_CaptureWidth * 2 );
-    //qDebug() << "offset "<<offset;
-    QMarginsF margins(offset.x(), offset.y(), offset.x(), offset.y());
-    //qDebug() << "MARGINS " << margins;
-    m_Bounds += margins;
-    //qDebug() << "NEW BOUNDS "<<m_Bounds<< m_Bounds.topLeft() << m_Bounds.bottomRight();
 
-
+    // expand the bounds by the offset.
+    m_Bounds = QRectF( QPointF(m_Bounds.x() - offset.x(), m_Bounds.y() - offset.y()),
+                  QSizeF(m_Bounds.width() + 2*offset.x(), m_Bounds.height() + 2 * offset.y()));
 
     m_Length = 0.0;
     for (int i=0;i<m_Bridge.count()-1;i++)

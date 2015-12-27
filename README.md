@@ -68,7 +68,7 @@ More discerning users might setup a special user group and only allow that user 
 ```
 $ sudo apt-get install qtbase5-dev qt5-qmake
 
-# enable QT5 if also QT4 is installed
+# enable QT5 environment if you also have QT4 installed
 $ export QTCHOOSER_RUNTOOL=qtconfig
 $ export QT_SELECT=5
 
@@ -80,6 +80,8 @@ Using Qt version 5.2.1 in /usr/lib/x86_64-linux-gnu
 $ cd ttwatcher/src
 $ cp strava_auth.h.orig strava_auth.h
 $ cp runkeeper_auth.h.orig runkeeper_auth.h
+$ cp smashrun_auth.h.orig smashrun_auth.h
+# fill in the client id's and secrets of the API's you need
 ```
 
 Build from CLI:

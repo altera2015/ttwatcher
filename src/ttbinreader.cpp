@@ -21,6 +21,7 @@
 #define TAG_WHEEL_SIZE          (0x2b)
 #define TAG_TRAINING_SETUP      (0x2d)
 #define TAG_LAP                 (0x2f)  // OK
+#define TAG_CYCLING_CADENCE     (0x31)
 #define TAG_TREADMILL           (0x32)  // OK
 #define TAG_SWIM                (0x34)  // OK
 #define TAG_GOAL_PROGRESS       (0x35)
@@ -31,15 +32,25 @@
 #define TAG_RACE_RESULT         (0x3d)
 #define TAG_ALTITUDE_UPDATE     (0x3e)  // OK
 #define TAG_HEART_RATE_RECOVERY (0x3f)  // OK
+#define TAG_INDOOR_CYCLING      (0x40)
+#define TAG_GYM                 (0x41)
+#define TAG_FITNESS_POINT       (0x4a)
+#define TAG_PLANNED_TRAINING    (0x4c)
 #define TAG_UNHANDLED           (0xff)
 
 // Activities:
-#define TT_ACTIVITY_RUN         0
-#define TT_ACTIVITY_CYCLE       1
-#define TT_ACTIVITY_SWIM        2
-#define TT_ACTIVITY_STOPWATCH   6
-#define TT_ACTIVITY_TREADMILL   7
-#define TT_ACTIVITY_FREESTYLE   8
+#define TT_ACTIVITY_RUN             0
+#define TT_ACTIVITY_CYCLE           1
+#define TT_ACTIVITY_SWIM            2
+#define TT_ACTIVITY_STOPWATCH       6
+#define TT_ACTIVITY_TREADMILL       7
+#define TT_ACTIVITY_FREESTYLE       8
+#define TT_ACTIVITY_GYM             9
+#define TT_ACTIVITY_HIKING          10
+#define TT_ACTIVITY_INDOOR          11
+#define TT_ACTIVITY_TRAILRUNNING    14
+#define TT_ACTIVITY_SKIING          15
+#define TT_ACTIVITY_SNOWBOARDING    16
 
 quint16 TTBinReader::readquint16(const quint8 *data, int pos)
 {
@@ -163,53 +174,95 @@ bool TTBinReader::readHeader(QIODevice &ttbin, ActivityPtr activity , QByteArray
 
     */
 
-    quint8 data[0x75];
-    if ( ttbin.read((char*)data, 0x75) != 0x75 )
-    {
-        qWarning() << "TTBinReader::readHeader / not enough bytes read.";
-        return false;
+    quint8 ttbin_file_version[1];
+
+	ttbin.read((char*)ttbin_file_version, 0x01);
+
+
+	if (ttbin_file_version[0] < 7)
+	{
+		qWarning() << "TTBinReader::readHeader / unknown file format, proceed at own risk. " << ttbin_file_version[0];
+		return false;
+	}
+
+	ttbin.seek(ttbin.pos() - 1);
+	quint8 data1[0x75];
+	quint8 data2[0x78];
+
+	if (ttbin_file_version[0] <= 9)
+
+	{
+		if ((ttbin.read((char*)data1, 0x75) != 0x75))
+		{
+			qWarning() << "TTBinReader::readHeader / not enough bytes read.";
+			return false;
+		}
+
+		if (cpy)
+		{
+			cpy->append((char*)data1, 0x75);
+		}
+
+
+		if (activity)
+		{
+			activity->setDate(readTime(data1, 7, true));
+
+		}
+		// UTC offset at pos 15 int32
+
+		m_UTCOffset = readqint32(data1, 15);
+
+	}
+	else
+	{
+		if ((ttbin.read((char*)data2, 0x78) != 0x78))
+		{
+			qWarning() << "TTBinReader::readHeader / not enough bytes read.";
+			return false;
+		}
+
+		if (cpy)
+		{
+			cpy->append((char*)data2, 0x78);
+		}
+
+
+		if (activity)
+		{
+			activity->setDate(readTime(data2, 10, true));
+
+		}
+		// UTC offset at pos 18 int32
+
+		m_UTCOffset = readqint32(data2, 18);
+	}
+	// read the record lengths.
+
+	quint8 lengths = (ttbin_file_version[0] <= 9) ? data1[116] : data2[119];
+
+	for (quint8 i = 0; i < lengths; i++)
+	{
+		quint8 lenrec[3];
+		ttbin.read((char*)lenrec, 3);
+		if (cpy)
+		{
+			cpy->append((char*)lenrec, 3);
+		}
+		quint8 tag;
+		quint16 len;
+
+		tag = lenrec[0];
+		len = (lenrec[1] | lenrec[2] << 8) - 1; // length includes the tag, we exclude it.
+
+		if (tag < 0xff && len < 0xffff)
+		{
+			m_RecordLengths[tag] = len;
+		}
+		//qDebug() << "TagLen " << QString::number(tag,16) << " len " << len;
+
     }
-    if ( cpy )
-    {
-        cpy->append((char*)data, 0x75);
-    }
-
-    if ( data[0] < 7 )
-    {
-        qWarning() << "TTBinReader::readHeader / unknown file format, proceed at own risk. " << data[0];
-        return false;
-    }
-
-    if ( activity )
-    {
-        activity->setDate( readTime(data, 7, true));
-    }
-    // UTC offset at pos 15 int32
-    m_UTCOffset = readqint32(data, 15);
-
-    // read the record lengths.
-    quint8 lengths = data[116];
-    for (quint8 i=0;i<lengths;i++)
-    {
-        quint8 lenrec[3];
-        ttbin.read((char*)lenrec, 3);
-        if ( cpy )
-        {
-            cpy->append((char*)lenrec, 3);
-        }
-        quint8 tag = lenrec[0];
-        quint16 len = ( lenrec[1] | lenrec[2] << 8) - 1; // length includes the tag, we exclude it.
-
-        if ( tag < 0xff && len < 0x1000 )
-        {
-            m_RecordLengths[tag] = len;
-        }
-        // qDebug() << "TagLen " << QString::number(tag,16) << " len " << len;
-
-
-    }
-
-
+    
     if ( activity )
     {
         LapList & ll = activity->laps();
@@ -583,6 +636,60 @@ bool TTBinReader::skipTag(QIODevice &ttbin, quint8 tag, int size, QByteArray * c
     return true;
 }
 
+bool TTBinReader::readTraining(QIODevice &ttbin, ActivityPtr activity, int maxSize)
+{
+	int recordLen = 0;
+	char c;
+	QByteArray buffer;
+
+	while (ttbin.getChar(&c))
+	{
+		ttbin.peek(c);
+		buffer[recordLen] = c;
+		recordLen++;
+	}
+
+	if (buffer.size() <= maxSize)
+	{
+		return true;
+	}
+}
+
+bool TTBinReader::readIndoor_Biking(QIODevice &ttbin, ActivityPtr activity)
+
+{
+
+	/* Tag = 0x40
+	  typedef struct
+  {
+	  uint32_t timestamp;
+	  float    distance_meters;
+	  uint16_t calories;
+	  uint8_t cycling_cadence;
+  } INDOOR_CYCLING_RECORD;
+
+	*/
+
+	QByteArray buffer;
+	if (!readData(ttbin, TAG_INDOOR_CYCLING, 0x1c, buffer))
+	{
+		return false;
+	}
+	quint8 * data = (quint8*)buffer.data();
+
+	LapPtr lap = activity->laps().last();
+
+	TrackPointPtr lp = TrackPointPtr::create();
+	lp->setTime(readTime(data, 0, false));
+
+	lp->setCalories(readquint32(data, 15));
+
+
+	lap->points().append(lp);
+
+	return true;
+}
+
 TTBinReader::TTBinReader()
 {
 }
@@ -610,7 +717,7 @@ ActivityPtr TTBinReader::read(QIODevice &ttbin, bool forgiving, bool headerAndSu
             return ActivityPtr();
         }
 
-        if ( tag != TAG_FILE_HEADER )
+        if ( tag != TAG_FILE_HEADER && tag != TAG_PLANNED_TRAINING )
         {
 
             if ( !m_RecordLengths.contains(tag) )
@@ -672,10 +779,12 @@ ActivityPtr TTBinReader::read(QIODevice &ttbin, bool forgiving, bool headerAndSu
         case TAG_SUMMARY: // summary at end.
             result = readSummary(ttbin, ap);
             break;
-
         case TAG_STATUS: // lap.
             result = readStatus(ttbin, ap);
             break;
+        case TAG_LAP: // lap.
+			result = readLap(ttbin, ap);
+			break;
         case TAG_GPS: // GPS pos + cadence
             result = readPosition(ttbin, ap, forgiving);
             break;
@@ -694,6 +803,9 @@ ActivityPtr TTBinReader::read(QIODevice &ttbin, bool forgiving, bool headerAndSu
         case TAG_HEART_RATE_RECOVERY:
             result = readRecovery(ttbin, ap);
             break;
+        case TAG_PLANNED_TRAINING:
+			result = readTraining(ttbin, ap, 0xfffe);
+			break;
 
         default:
 
@@ -784,7 +896,7 @@ bool TTBinReader::updateActivityType(QIODevice &ttbin, bool forgiving, QIODevice
         output.write((char*)&tag, 1);
 
 
-        if ( tag != TAG_FILE_HEADER )
+        if ( tag != TAG_FILE_HEADER && tag != TAG_PLANNED_TRAINING )
         {
 
             if ( !m_RecordLengths.contains(tag) )

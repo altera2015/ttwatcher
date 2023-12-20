@@ -4,6 +4,7 @@ TARGET = ttwatcher
 TEMPLATE = app
 
 win32:INCLUDEPATH += C:\Qt\5.4.1\src\qtbase\src\3rdparty\zlib
+win32:CONFIG += c++11
 win32:LIBS +=-lUser32 -lPsapi -lhid -lsetupapi
 win32:RC_FILE = ttwatcher.rc
 linux:CONFIG += c++11

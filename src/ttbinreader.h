@@ -25,7 +25,8 @@ class TTBinReader
     bool readSwim( QIODevice & ttbin, ActivityPtr activity );
     bool readAltitude( QIODevice & ttbin, ActivityPtr activity );
     bool readRecovery(QIODevice &ttbin, ActivityPtr activity);
-
+    bool readTraining(QIODevice & ttbin, ActivityPtr activity, int maxSize );
+    bool readIndoor_Biking( QIODevice & ttbin, ActivityPtr activity );
     bool skipTag(QIODevice & ttbin, quint8 tag, int size , QByteArray *cpy = 0);
 
 public:
